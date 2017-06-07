@@ -1,30 +1,27 @@
 package org.cbio.gdcpipeline.model.gdc.clinical;
 
 
+import org.springframework.batch.item.ResourceAware;
+import org.springframework.core.io.Resource;
 
-public class GDCClinicalDataModel {
+public class GDCClinicalDataModel implements ResourceAware {
 
-    public String getAdditional_studies() {
-        return additional_studies;
-    }
-
-    public void setAdditional_studies(String additional_studies) {
-        this.additional_studies = additional_studies;
-    }
-
-    private String additional_studies;
     private String patient_id;
     private String sample_id;
     private String sex;
     private int age;
+    private String os_status;
+    private Resource resource;
 
-    public GDCClinicalDataModel(String additional_studies, String patient_id, String sample_id, String sex, int age) {
-        this.additional_studies=additional_studies;
+    public GDCClinicalDataModel() {
+    }
+
+    public GDCClinicalDataModel(String patient_id, String sample_id, String sex, int age, String os_status) {
         this.patient_id = patient_id;
         this.sample_id = sample_id;
         this.sex = sex;
         this.age = age;
-        this.additional_studies=additional_studies;
+        this.os_status = os_status;
     }
 
     public String getPatient_id() {
@@ -57,5 +54,18 @@ public class GDCClinicalDataModel {
 
     public void setAge(int age) {
         this.age = age;
+    }
+
+    public String getOs_status() {
+        return os_status;
+    }
+
+    public void setOs_status(String os_status) {
+        this.os_status = os_status;
+    }
+
+    @Override
+    public void setResource(Resource resource) {
+        this.resource=resource;
     }
 }
