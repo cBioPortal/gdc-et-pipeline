@@ -1,0 +1,3 @@
+patient_id	sample_id	sex	age	os_status
+TCGA-3C-AAAU	TCGA-3C-AAAU	FEMALE	55	Alive
+TCGA-A1-A0SD	TCGA-A1-A0SD	FEMALE	59	Alive

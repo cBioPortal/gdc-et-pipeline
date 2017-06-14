@@ -1,20 +1,31 @@
 package org.cbio.gdcpipeline.processor;
 
 import org.cbio.gdcpipeline.model.cbio.CBioClinicalDataModel;
+import org.cbio.gdcpipeline.model.gdc.nci.tcga.bcr.xml.clinical.brca._2.Patient;
+import org.cbio.gdcpipeline.model.gdc.nci.tcga.bcr.xml.clinical.brca._2.TcgaBcr;
 import org.cbio.gdcpipeline.model.gdc.clinical.GDCClinicalDataModel;
 import org.springframework.batch.item.ItemProcessor;
 
 
-public class ClinicalDataProcessor implements ItemProcessor<GDCClinicalDataModel,CBioClinicalDataModel> {
+public class ClinicalDataProcessor implements ItemProcessor<TcgaBcr,CBioClinicalDataModel> {
     @Override
-    public CBioClinicalDataModel process(GDCClinicalDataModel gdcClinicalDataModel) throws Exception {
+    public CBioClinicalDataModel process(TcgaBcr patient) throws Exception {
+
+        System.out.print("======================= INSIDE PROCESSOR===========");
+        System.out.print("======================= INSIDE PROCESSOR===========");
+        System.out.print("======================= INSIDE PROCESSOR===========");
+        System.out.print("======================= INSIDE PROCESSOR===========");System.out.print("======================= INSIDE PROCESSOR===========");
+        System.out.print("======================= INSIDE PROCESSOR===========");
+        System.out.print(patient.getPatient().toString());
+
         CBioClinicalDataModel cBio = new CBioClinicalDataModel();
-        cBio.setPatient_id(gdcClinicalDataModel.getPatient_id());
-        cBio.setSample_id(gdcClinicalDataModel.getSample_id());
-        cBio.setAge(gdcClinicalDataModel.getAge());
-        cBio.setSex(gdcClinicalDataModel.getSex());
-        cBio.setOs_status(gdcClinicalDataModel.getOs_status());
+        cBio.setPatient_id(patient.getPatient().getBcrPatientBarcode().getValue());
+        cBio.setSample_id(patient.getPatient().getBcrPatientBarcode().getValue());
+        cBio.setAge(Integer.parseInt(patient.getPatient().getAgeAtInitialPathologicDiagnosis().getValue()));
+        cBio.setSex(patient.getPatient().getGender().getValue());
+        cBio.setOs_status(patient.getPatient().getVitalStatus().getValue());
         return cBio;
+        //return patient;
 
 
     }
