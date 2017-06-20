@@ -7,7 +7,7 @@ import org.cbio.gdcpipeline.model.gdc.clinical.GDCClinicalDataModel;
 import org.springframework.batch.item.ItemProcessor;
 
 
-public class ClinicalDataProcessor implements ItemProcessor<TcgaBcr,CBioClinicalDataModel> {
+public class ClinicalDataProcessor<Object> implements ItemProcessor<TcgaBcr,CBioClinicalDataModel> {
     @Override
     public CBioClinicalDataModel process(TcgaBcr patient) throws Exception {
 

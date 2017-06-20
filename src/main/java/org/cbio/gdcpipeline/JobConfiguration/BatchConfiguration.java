@@ -1,22 +1,32 @@
 package org.cbio.gdcpipeline.JobConfiguration;
 
-import org.cbio.gdcpipeline.tasklet.ClinicalTransformationTasklet;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.cbio.gdcpipeline.model.cbio.CBioClinicalDataModel;
+import org.cbio.gdcpipeline.reader.ClinicalStreamReader;
+import org.cbio.gdcpipeline.tasklet.FileMappingTasklet;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
-import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.step.tasklet.Tasklet;
+import org.springframework.batch.item.file.MultiResourceItemReader;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.cbio.gdcpipeline.writer.ClinicalDataWriter;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+import org.springframework.core.io.support.ResourcePatternResolver;
+
+import java.io.IOException;
 
 @Configuration
-@EnableBatchProcessing
 public class BatchConfiguration {
+    private static Log LOG = LogFactory.getLog(BatchConfiguration.class);
+
 
     @Autowired
     JobBuilderFactory jobBuilderFactory;
@@ -30,57 +40,82 @@ public class BatchConfiguration {
     @Autowired
     private JobLauncher jobLauncher;
 
-    @Bean
-    public Step beginClinicalTransformation(){
-        return stepBuilderFactory.get("beginClinicalTransformation")
-                .tasklet(clinicalTransformationTasklet())
-                .build();
-    }
+    // get from execution context
+    private Resource[] inputFiles;
+
 
     @Bean
-    public Step writeClinicalData(){
-        return stepBuilderFactory.get("writeClinicalData")
-                .tasklet(clinicalDataWriter())
+    public Step fileMappingStep() {
+        return stepBuilderFactory.get("fileMappingStep")
+                .tasklet(createFileMappings())
                 .build();
     }
 
     @Bean
     @StepScope
-    public Tasklet clinicalTransformationTasklet(){
-        return new ClinicalTransformationTasklet();
+    public Tasklet createFileMappings(){
+        return new FileMappingTasklet();
     }
+
+    public Resource[] getXMLResource() {
+        ClassLoader cl = this.getClass().getClassLoader();
+        ResourcePatternResolver resolver = new PathMatchingResourcePatternResolver(cl);
+        try {
+            inputFiles = resolver.getResources("classpath*:/data/GDC/clinical/*.xml");
+        } catch (IOException e) {
+            LOG.error("ERROR RESOLVING CLASSPATH");
+            e.printStackTrace();
+        }
+        return inputFiles;
+
+    }
+
+    @Bean
+    public MultiResourceItemReader<CBioClinicalDataModel> multiResourceReader() {
+        MultiResourceItemReader<CBioClinicalDataModel> reader = new MultiResourceItemReader<>();
+        reader.setDelegate(clinicalXMLReader());
+        reader.setResources(getXMLResource());
+        return reader;
+
+    }
+
+    @Bean
+    public ClinicalStreamReader clinicalXMLReader() {
+        return new ClinicalStreamReader();
+
+    }
+
     @Bean
     @StepScope
-    public Tasklet clinicalDataWriter(){
+    public ClinicalDataWriter clinicalDataWriter() {
         return new ClinicalDataWriter();
     }
 
-//    /*@Bean
-//    public Job mainJob(JobRepository jobRepository, PlatformTransactionManager platformTransactionManager){
-//        Step clinicalJobStep = new JobStepBuilder(new StepBuilder("clinicalDataJob"))
-//                .job(clinicalDataJob)
-//                .launcher(jobLauncher)
-//                .repository(jobRepository)
-//                .transactionManager(platformTransactionManager)
-//                .build();
-//
-//        //TODO
-//        return jobBuilderFactory.get("mainJob")
-//                .start(beginTransformation())
-//                .next(clinicalJobStep)
-//                .build();
-//    }*/
 
     @Bean
-    public Job mainJob(){
-        return jobBuilderFactory.get("mainJob")
-                .start(beginClinicalTransformation())
-                .next(writeClinicalData())
+    public Step clinicalDataStep() {
+        // return new ClinicalDataStep().clinicalDataStep();
+        return stepBuilderFactory.get("clinicalDataStep")
+                .<CBioClinicalDataModel, CBioClinicalDataModel>chunk(100)
+                .reader(multiResourceReader())
+                //.processor(clinicalDataProcessor())
+                .writer(clinicalDataWriter())
+                //.stream(clinicalXMLReader())
                 .build();
     }
 
 
+    // Flow of All Steps
 
-
+    @Bean
+    public Job mainJob() {
+        return jobBuilderFactory.get("mainJob")
+                // .start(fileMappingStep())
+                .start(clinicalDataStep())
+                // .next(segmentedDataStep())
+                // .next(mutationDataStep())
+                // .next(cnaDataStep())
+                .build();
+    }
 
 }

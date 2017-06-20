@@ -8,14 +8,18 @@ import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.JobParametersBuilder;
+import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.core.io.Resource;
 
 @SpringBootApplication
+@EnableBatchProcessing
 public class GDCPipelineApplication {
 
 
@@ -37,12 +41,8 @@ public class GDCPipelineApplication {
 	}
 
 	private static void launchJob(String[] args, String sourceDirectory, String outputDirectory,String jobName) throws Exception {
-
-		//SpringApplication.run(GDCPipelineApplication.class,args);
 		SpringApplication app = new SpringApplication(GDCPipelineApplication.class);
-		ConfigurableApplicationContext ctx=null;
-		ctx= app.run(args);
-
+		ApplicationContext ctx= app.run(args);
 		Job mainJob = ctx.getBean("mainJob", Job.class);
 		long t = System.currentTimeMillis();
 		String time = String.valueOf(t);
@@ -55,7 +55,7 @@ public class GDCPipelineApplication {
 				.addString("time",time)
 				.toJobParameters();
 		JobExecution jobExecution = jobLauncher.run(mainJob, jobParameters);
-		LOG.info("Done running GDC Pipeline Job.");
+		LOG.info("GDC Pipeline Job completed.");
 	}
 
 
