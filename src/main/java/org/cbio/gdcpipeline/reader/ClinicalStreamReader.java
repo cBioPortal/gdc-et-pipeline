@@ -5,6 +5,8 @@ import org.apache.commons.logging.LogFactory;
 import org.cbio.gdcpipeline.GDCPipelineApplication;
 import org.cbio.gdcpipeline.model.cbio.CBioClinicalDataModel;
 import org.cbio.gdcpipeline.model.gdc.nci.tcga.bcr.xml.clinical.brca._2.TcgaBcr;
+import org.springframework.batch.core.StepExecution;
+import org.springframework.batch.core.annotation.BeforeStep;
 import org.springframework.batch.item.*;
 import org.springframework.batch.item.file.ResourceAwareItemReaderItemStream;
 import org.springframework.core.io.Resource;

@@ -1,9 +1,0 @@
-<patients>
-<patient>
-    <patient_id>123</patient_id>
-    <sample_id>12122</sample_id>
-    <sex>male</sex>
-    <age>22</age>
-    <os_status>alive</os_status>
-</patient>
-</patients>

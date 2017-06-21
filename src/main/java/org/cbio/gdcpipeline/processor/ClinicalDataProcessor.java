@@ -3,7 +3,6 @@ package org.cbio.gdcpipeline.processor;
 import org.cbio.gdcpipeline.model.cbio.CBioClinicalDataModel;
 import org.cbio.gdcpipeline.model.gdc.nci.tcga.bcr.xml.clinical.brca._2.Patient;
 import org.cbio.gdcpipeline.model.gdc.nci.tcga.bcr.xml.clinical.brca._2.TcgaBcr;
-import org.cbio.gdcpipeline.model.gdc.clinical.GDCClinicalDataModel;
 import org.springframework.batch.item.ItemProcessor;
 
 

@@ -3,7 +3,6 @@ package org.cbio.gdcpipeline;
 import org.apache.commons.cli.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.cbio.gdcpipeline.model.gdc.clinical.GDCClinicalDataModel;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobParameters;

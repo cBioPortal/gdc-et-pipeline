@@ -91,12 +91,12 @@ public class BatchConfiguration {
         return new ClinicalDataWriter();
     }
 
-
+   //TODO Add chunk to props
     @Bean
     public Step clinicalDataStep() {
-        // return new ClinicalDataStep().clinicalDataStep();
+
         return stepBuilderFactory.get("clinicalDataStep")
-                .<CBioClinicalDataModel, CBioClinicalDataModel>chunk(100)
+                .<CBioClinicalDataModel, CBioClinicalDataModel>chunk(1000)
                 .reader(multiResourceReader())
                 //.processor(clinicalDataProcessor())
                 .writer(clinicalDataWriter())
@@ -110,8 +110,8 @@ public class BatchConfiguration {
     @Bean
     public Job mainJob() {
         return jobBuilderFactory.get("mainJob")
-                // .start(fileMappingStep())
-                .start(clinicalDataStep())
+                .start(fileMappingStep())
+                .next(clinicalDataStep())
                 // .next(segmentedDataStep())
                 // .next(mutationDataStep())
                 // .next(cnaDataStep())

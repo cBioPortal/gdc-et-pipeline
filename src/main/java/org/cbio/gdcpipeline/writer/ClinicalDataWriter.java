@@ -31,6 +31,7 @@ public class ClinicalDataWriter implements ResourceAwareItemWriterItemStream<CBi
     private String dataOutputFile;
     private Resource resource;
 
+
     public static final String CLINICAL_DATA_FILE_NAME = "data_clinical_samples.txt";
     public static final String CLINICAL_METADATA_FILE_NAME = "meta_clinical_samples.txt";
     FlatFileItemWriter<CBioClinicalDataModel> dataWriter = new FlatFileItemWriter<>();
