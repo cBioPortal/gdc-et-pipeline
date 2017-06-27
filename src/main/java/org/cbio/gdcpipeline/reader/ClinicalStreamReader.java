@@ -2,21 +2,24 @@ package org.cbio.gdcpipeline.reader;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.cbio.gdcpipeline.GDCPipelineApplication;
 import org.cbio.gdcpipeline.model.cbio.CBioClinicalDataModel;
+import org.cbio.gdcpipeline.model.cbio.PatientFileModel;
+import org.cbio.gdcpipeline.model.cbio.SampleFileModel;
 import org.cbio.gdcpipeline.model.gdc.nci.tcga.bcr.xml.clinical.brca._2.TcgaBcr;
-import org.springframework.batch.core.StepExecution;
-import org.springframework.batch.core.annotation.BeforeStep;
-import org.springframework.batch.item.*;
+import org.springframework.batch.item.ExecutionContext;
+import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.file.ResourceAwareItemReaderItemStream;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -25,16 +28,42 @@ import java.util.List;
 public class ClinicalStreamReader implements ResourceAwareItemReaderItemStream<CBioClinicalDataModel>{
 
     private Resource resource;
+
     private static Log LOG = LogFactory.getLog(ClinicalStreamReader.class);
     private List<CBioClinicalDataModel> cBioClinicalDataModelList = new ArrayList<>();
 
+    @Value("#{jobExecutionContext[barcodeToSamplesMap]}")
+    private HashMap<String, List<String>> barcodeToSamplesMap;
+
+    @Value("${onco.code.tcga.brca}")
+    private String oncotree_code;
 
     @Override
-    public CBioClinicalDataModel read() throws Exception, UnexpectedInputException, ParseException, NonTransientResourceException {
+    public CBioClinicalDataModel read() throws Exception {
         if (!this.cBioClinicalDataModelList.isEmpty()){
             return cBioClinicalDataModelList.remove(0);
         }
         return null;
+    }
+
+    private PatientFileModel setPatientFields(TcgaBcr tcgaBcr) {
+        PatientFileModel patient = new PatientFileModel();
+        patient.setPatient_id(tcgaBcr.getPatient().getBcrPatientBarcode().getValue());
+        patient.setSex(tcgaBcr.getPatient().getGender().getValue());
+        patient.setAge(Integer.parseInt(tcgaBcr.getPatient().getAgeAtInitialPathologicDiagnosis().getValue()));
+        patient.setOs_status(tcgaBcr.getPatient().getVitalStatus().getValue());
+
+        return patient;
+
+    }
+
+    private SampleFileModel setSampleFields(TcgaBcr tcgaBcr) {
+        SampleFileModel sample = new SampleFileModel();
+        sample.setPatient_id(tcgaBcr.getPatient().getBcrPatientBarcode().getValue());
+        sample.setSample_id(barcodeToSamplesMap.get(sample.getPatient_id()));
+        sample.setOncotree_code(oncotree_code);
+        return sample;
+
     }
 
     private CBioClinicalDataModel unmarshall(File xmlFile) throws JAXBException {
@@ -42,16 +71,15 @@ public class ClinicalStreamReader implements ResourceAwareItemReaderItemStream<C
         JAXBContext jaxbContext = JAXBContext.newInstance(TcgaBcr.class);
         Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
 
+        // root
         TcgaBcr tcgaBcr = (TcgaBcr)unmarshaller.unmarshal(xmlFile);
+
         CBioClinicalDataModel cBioClinicalDataModel = new CBioClinicalDataModel();
 
-        cBioClinicalDataModel.setPatient_id(tcgaBcr.getPatient().getBcrPatientBarcode().getValue());
-        //TODO this is not found in Clinical but Biospecimen xml
-        //TODO get from execution context
-        cBioClinicalDataModel.setSample_id(tcgaBcr.getPatient().getBcrPatientBarcode().getValue());
-        cBioClinicalDataModel.setSex(tcgaBcr.getPatient().getGender().getValue());
-        cBioClinicalDataModel.setAge(Integer.parseInt(tcgaBcr.getPatient().getAgeAtInitialPathologicDiagnosis().getValue()));
-        cBioClinicalDataModel.setOs_status(tcgaBcr.getPatient().getVitalStatus().getValue());
+        PatientFileModel patient = setPatientFields(tcgaBcr);
+        SampleFileModel sample = setSampleFields(tcgaBcr);
+        cBioClinicalDataModel.setPatientFileModel(patient);
+        cBioClinicalDataModel.setSampleFileModel(sample);
 
         return cBioClinicalDataModel;
 
@@ -65,9 +93,10 @@ public class ClinicalStreamReader implements ResourceAwareItemReaderItemStream<C
         File xmlFile = null;
         try {
              xmlFile = resource.getFile();
+            if (xmlFile == null) throw new FileNotFoundException("Resource Error. Cannot read file");
         } catch (IOException e) {
-            LOG.error("Resource Error. Cannot read file");
             e.printStackTrace();
+            return;
         }
 
         try {
@@ -96,4 +125,6 @@ public class ClinicalStreamReader implements ResourceAwareItemReaderItemStream<C
         this.resource = resource;
 
     }
+
+
 }

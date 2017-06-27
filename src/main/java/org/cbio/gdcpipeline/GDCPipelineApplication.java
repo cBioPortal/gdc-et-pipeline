@@ -9,13 +9,10 @@ import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.launch.JobLauncher;
-import org.springframework.batch.core.repository.JobRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.core.io.Resource;
+
 
 @SpringBootApplication
 @EnableBatchProcessing
@@ -27,7 +24,8 @@ public class GDCPipelineApplication {
 	private static Options getOptions(String []input){
 		Options options = new Options();
 		options.addOption("j","job",false,"Job to run");
-		options.addOption("s","source",true,"source directory for files");
+        options.addOption("study", "study", true, "Cancer Study Id");
+        options.addOption("s","source",true,"source directory for files");
 		options.addOption("o","output",true,"output directory for files");
 		options.addOption("h", "help", false, "shows this help document and quits.");
 		return options;
@@ -39,8 +37,8 @@ public class GDCPipelineApplication {
 		System.exit(exitStatus);
 	}
 
-	private static void launchJob(String[] args, String sourceDirectory, String outputDirectory,String jobName) throws Exception {
-		SpringApplication app = new SpringApplication(GDCPipelineApplication.class);
+    private static void launchJob(String[] args, String sourceDirectory, String outputDirectory, String jobName, String study) throws Exception {
+        SpringApplication app = new SpringApplication(GDCPipelineApplication.class);
 		ApplicationContext ctx= app.run(args);
 		Job mainJob = ctx.getBean("mainJob", Job.class);
 		long t = System.currentTimeMillis();
@@ -51,7 +49,8 @@ public class GDCPipelineApplication {
 				.addString("sourceDirectory", sourceDirectory)
 				.addString("outputDirectory", outputDirectory)
 				.addString("job",jobName)
-				.addString("time",time)
+                .addString("study", study)
+                .addString("time",time)
 				.toJobParameters();
 		JobExecution jobExecution = jobLauncher.run(mainJob, jobParameters);
 		LOG.info("GDC Pipeline Job completed.");
@@ -69,13 +68,19 @@ public class GDCPipelineApplication {
 			GDCPipelineApplication.help(options,0);
 		}
 
-		String sourceDirectory="";String jobName="";String outputDirectory="";
+        String sourceDirectory = "";
+        String jobName = "";
+        String outputDirectory = "";
+        String study = "";
 
 		if (cli.hasOption("source")){ sourceDirectory = cli.getOptionValue("source");}
 		if (cli.hasOption("output")){ outputDirectory = cli.getOptionValue("output");}
 		if (cli.hasOption("job")){ jobName = cli.getOptionValue("job");}
+        if (cli.hasOption("study")) {
+            study = cli.getOptionValue("study");
+        }
 
-		launchJob(args,sourceDirectory,outputDirectory,jobName);
+        launchJob(args, sourceDirectory, outputDirectory, jobName, study);
 
 
 

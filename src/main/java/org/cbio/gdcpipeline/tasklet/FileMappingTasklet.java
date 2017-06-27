@@ -1,11 +1,14 @@
 package org.cbio.gdcpipeline.tasklet;
 
 
-import com.google.gson.*;
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.cbio.gdcpipeline.model.gdc.nci.tcga.bcr.xml.biospecimen._2.Sample;
 import org.cbio.gdcpipeline.model.gdc.nci.tcga.bcr.xml.biospecimen._2.TcgaBcr;
+import org.cbio.gdcpipeline.model.rest.response.Case;
 import org.cbio.gdcpipeline.model.rest.response.GdcApiResponse;
 import org.cbio.gdcpipeline.model.rest.response.Hits;
 import org.springframework.batch.core.StepContribution;
@@ -31,26 +34,33 @@ import java.util.List;
      3. Add both maps to execution context
      */
 
+/**
+ * @author Dixit Patel
+ */
+
 public class FileMappingTasklet implements Tasklet {
 
     private static Log LOG = LogFactory.getLog(FileMappingTasklet.class);
 
-    //TODO get from GDC file name ?
     @Value("#{jobParameters[sourceDirectory]}")
     private String sourceDir;
 
-    private List<String> barcodes = new ArrayList<>();
-    private List<String> case_uuid_list = new ArrayList<>();
+    @Value("#{jobParameters[study]}")
+    private String cancer_study_id;
 
-    //TODO add to props
-    private final static String GDC_API_ENDPOINT = "https://api.gdc.cancer.gov/files";
+    @Value("${gdc.api.endpoint}")
+    private String GDC_API_ENDPOINT;
 
-    private HashMap<String, List<String>> barcodeToSamples = new HashMap<>();
-    private HashMap<String, List<String>> uuidToFiles = new HashMap<>();
+    @Value("${gdc.max.response.size}")
+    private int MAX_RESPONSE_SIZE;
+
+    private HashMap<String, List<String>> barcodeToSamplesMap = new HashMap<>();
+    private HashMap<String, List<String>> uuidToFilesMap = new HashMap<>();
     private RestTemplate restTemplate = new RestTemplate();
 
 
-    private void xmlUnmarshall(File xmlFile) throws JAXBException {
+    protected void xmlUnmarshall(File xmlFile) throws JAXBException {
+
 
         JAXBContext jaxbContext = JAXBContext.newInstance(TcgaBcr.class);
         Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
@@ -59,10 +69,10 @@ public class FileMappingTasklet implements Tasklet {
 
         String case_uuid = tcgaBcr.getPatient().getBcrPatientUuid().getValue();
         case_uuid = case_uuid.toLowerCase();
-        case_uuid_list.add(case_uuid);
+        List<String> emptyList = new ArrayList<>();
+        uuidToFilesMap.put(case_uuid, emptyList);
 
         String barcode = tcgaBcr.getPatient().getBcrPatientBarcode().getValue();
-        barcodes.add(barcode);
 
         List<Sample> samples = tcgaBcr.getPatient().getSamples().getSample();
         List<String> samplesList = new ArrayList<>();
@@ -70,37 +80,35 @@ public class FileMappingTasklet implements Tasklet {
             samplesList.add(barcode + "-" + sample.getSampleTypeId().getValue());
         }
 
-        barcodeToSamples.put(barcode, samplesList);
+        barcodeToSamplesMap.put(barcode, samplesList);
 
     }
 
 
-    /**
+    /*  Payload format
      * {
      * "filters":{
-     * "op":"in",
-     * "content":{
-     * "field":"cases.case_id",
-     * "value":[
-     * "784de7ac-8424-42eb-83d4-a1bebaa42b97"
-     * ]
-     * }
-     * },
+     *          "op":"in",
+     *          "content":{
+     *                  "field":"cases.case_id",
+     *                  "value":["ABC123"]
+     *                  }
+     *          },
      * "format":"JSON",
-     * "fields":"file_name",
-     * "size":"5"
+     * "fields":"file_name,cases.case_id",
+     *
      * }
-     **/
+     */
 
     //TODO add to props
-    private String buildJSON() {
+    protected String buildJsonRequest() {
 
         JsonObject node = new JsonObject();
         JsonObject filters = new JsonObject();
         JsonObject content = new JsonObject();
         JsonArray values = new JsonArray();
 
-        for (String id : case_uuid_list) {
+        for (String id : uuidToFilesMap.keySet()) {
             values.add(id);
         }
 
@@ -113,37 +121,36 @@ public class FileMappingTasklet implements Tasklet {
         node.add("filters", filters);
         node.addProperty("format", "JSON");
         node.addProperty("fields", "file_name,cases.case_id");
-        node.addProperty("size", "100");
 
         return node.toString();
 
     }
 
-    private ResponseEntity<String> callGDCApi() {
-        if (case_uuid_list.isEmpty()) {
+    protected ResponseEntity<String> callGdcApi(String url, String payload) {
+        if (uuidToFilesMap.isEmpty()) {
             return null;
         }
-
-        String payload = buildJSON();
         LOG.info(" PAYLOAD = " + payload);
         LOG.info("Calling GDC API ");
+
         HttpHeaders httpHeaders = new HttpHeaders();
         httpHeaders.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> entity = new HttpEntity<String>(payload.toString(), httpHeaders);
-        ResponseEntity<String> response = restTemplate.exchange(GDC_API_ENDPOINT, HttpMethod.POST, entity, String.class);
+        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
+
         return response;
 
     }
 
-    /*
+    /* Response Format
     {
         "data": {
-            "hits": [{
-                "file_name": "a7b9df41-37f7-4f9b-ad86-2d60224ada26.vep.reheader.vcf.gz"
-                "cases": [{
-                        "case_id": "6e7d5ec6-a469-467c-b748-237353c23416"
-                         }]
-            }]
+            "hits": [
+               { "file_name": "XYZ.vcf.gz"
+                 "cases": [{"case_id": "ABC123"}]
+               },
+               { .... }
+            ]
             "pagination":{...}
         }
     }
@@ -151,37 +158,69 @@ public class FileMappingTasklet implements Tasklet {
 
      */
 
-    //TODO revise parsing
-
-    private GdcApiResponse parseJsonResponse(ResponseEntity<String> response){
-//        JsonParser jsonParser = new JsonParser();
-//        JsonElement jsonTree = jsonParser.parse(response.getBody().toString());
-//        if(jsonTree.isJsonObject()){
-//            JsonObject node = jsonTree.getAsJsonObject();
-//            LOG.info(node.toString());
-//            JsonElement j1 = node.get("data");
-//            JsonObject j2 = j1.getAsJsonObject();
-//            JsonElement j3 = j2.get("hits");
-//            JsonArray subList = j3.getAsJsonArray();
-//            JsonObject j4 = subList.getAsJsonObject();
-//
-//            JsonObject fileName=j4.get("file_name").getAsJsonObject();
-//            JsonArray caseList = j4.get("cases").getAsJsonArray();
-//            JsonObject caseId = caseList.getAsJsonObject().get("case_id").getAsJsonObject();
-//
-//
-//            System.exit(0);
-//        }
-//        System.exit(0);
-
+    protected GdcApiResponse parseJsonResponse(ResponseEntity<String> response) {
         LOG.info("Parsing API Response ");
-
         Gson g = new Gson();
-        GdcApiResponse r = g.fromJson(response.getBody().toString(),GdcApiResponse.class);
+        GdcApiResponse r = g.fromJson(response.getBody().toString(), GdcApiResponse.class);
         return r;
+    }
 
+    protected String getCaseIdFromResponse(Hits hit) {
+        List<Case> caseList = hit.getCases();
+        if (caseList.size() == 1) {
+            // The only case_id
+            return caseList.get(0).getCase_id();
+        } else {
+            for (Case c : caseList) {
+                if (uuidToFilesMap.containsKey(c.getCase_id())) {
+                    return c.getCase_id();
+                }
+            }
 
+        }
+        return null;
+    }
 
+    protected void addDataToMap(GdcApiResponse resp) {
+        //Map : case_id --> file_name
+
+        for (Hits hit : resp.getData().getHits()) {
+            //Response is jumbled and can have a file name associated with many unrelated case_id's.
+            // E.g  MAF files. Identify the id sent in request
+            String case_id = getCaseIdFromResponse(hit);
+            uuidToFilesMap.get(case_id).add(hit.getFile_name());
+
+        }
+    }
+
+    protected RepeatStatus gdcApiRequest(String payload) {
+
+        int callCount = 0;
+        int totalCallCount = 1;
+        int from = 1;
+
+        while (callCount != totalCallCount) {
+            callCount += 1;
+            String url = GDC_API_ENDPOINT + "?from=" + from + "&size=" + MAX_RESPONSE_SIZE;
+            LOG.info("API Request = " + url);
+            ResponseEntity<String> response = callGdcApi(url, payload);
+            if (response == null) {
+                LOG.error(" No Case Id's to add to API call");
+                return RepeatStatus.FINISHED;
+            }
+            if (response.getStatusCode() != HttpStatus.OK) {
+                LOG.error("Error calling GDC API. Error code is :" + response.getStatusCode().toString());
+                //TODO is this correct ? Handle error here
+                return RepeatStatus.CONTINUABLE;
+
+            }
+            GdcApiResponse res = parseJsonResponse(response);
+            addDataToMap(res);
+
+            totalCallCount = res.getData().getPagination().getPages();
+            from = callCount * MAX_RESPONSE_SIZE + 1;
+        }
+        return RepeatStatus.FINISHED;
     }
 
     @Override
@@ -189,11 +228,10 @@ public class FileMappingTasklet implements Tasklet {
 
         long startTime = System.currentTimeMillis();
 
-        //TODO Assuming all files are in a single directory
-        File dir = new File(sourceDir);
+        File projectDir = new File(sourceDir + File.separator + cancer_study_id);
 
         List<File> xmlFiles = new ArrayList<>();
-        for (File file : dir.listFiles()) {
+        for (File file : projectDir.listFiles()) {
             if (!file.isDirectory()) {
                 if (file.getName().endsWith(".xml") && file.getName().contains("biospecimen")) {
                     xmlFiles.add(file);
@@ -203,65 +241,41 @@ public class FileMappingTasklet implements Tasklet {
 
         LOG.info("Number of Biospecimen Files found = " + xmlFiles.size());
 
+        if (xmlFiles.isEmpty()) {
+            throw new Exception("No Biospecimen files found. Job terminated");
+        }
+
         for (File biospecimenXML : xmlFiles) {
-            LOG.info("Proccesing file : " + biospecimenXML.getName());
+            LOG.info("Processing file : " + biospecimenXML.getName());
             //JAXB
             try {
                 xmlUnmarshall(biospecimenXML);
             } catch (JAXBException e) {
                 LOG.error("Unmarshall error");
+                LOG.error(" Skipping File :" + biospecimenXML.getName());
+
             }
         }
 
-        //Call GDC API with barcodes
+        String payload = buildJsonRequest();
 
-        ResponseEntity<String> response = callGDCApi();
-        if (response == null) {
-            LOG.error(" No Case Id's to add to API call");
-            return RepeatStatus.FINISHED;
-        }
-        if (response.getStatusCode() != HttpStatus.OK) {
-            LOG.error("Error calling GDC API. Error code is :" + response.getStatusCode().toString());
-            // System.exit(0);
-            //TODO is this correct ? Handle error here
-            return RepeatStatus.CONTINUABLE;
-
-        }
-
-        GdcApiResponse resp = parseJsonResponse(response);
-
-        //TODO work on Pagination
-
-        // Add to map
-        for(Hits hit : resp.getData().getHits()){
-            String case_id = hit.getCases().get(0).getCase_id();
-            if(uuidToFiles.containsKey(case_id)){
-                uuidToFiles.get(case_id).add(hit.getFile_name());
-            }
-            else{
-                List<String> fileNames = new ArrayList<>();
-                fileNames.add(hit.getFile_name());
-                uuidToFiles.put(case_id,fileNames);
-            }
-        }
-
+        RepeatStatus status = gdcApiRequest(payload);
 
         chunkContext.getStepContext()
                 .getStepExecution()
-                .getJobExecution()
                 .getExecutionContext()
-                .put("barcodeToSamplesMap", barcodeToSamples);
+                .put("barcodeToSamplesMap", barcodeToSamplesMap);
 
         chunkContext.getStepContext()
                 .getStepExecution()
-                .getJobExecution()
                 .getExecutionContext()
-                .put("uuidToFilesMap", uuidToFiles);
+                .put("uuidToFilesMap", uuidToFilesMap);
         long endTime = System.currentTimeMillis();
 
-        LOG.info("Finished File Mapping Step in "+((endTime-startTime)/1000)+" secs");
+        LOG.info("Finished File Mapping Step in " + ((endTime - startTime) / 1000) + " secs");
 
-        return RepeatStatus.FINISHED;
+        return status;
     }
+
 }
 
