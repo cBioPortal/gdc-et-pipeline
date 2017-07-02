@@ -8,6 +8,15 @@ import java.util.List;
 public class Hits {
     private String file_name;
     private List<Case> cases;
+    private String data_format;
+
+    public String getData_format() {
+        return data_format;
+    }
+
+    public void setData_format(String data_format) {
+        this.data_format = data_format;
+    }
 
     public String getFile_name() {
         return file_name;

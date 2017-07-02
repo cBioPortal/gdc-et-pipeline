@@ -1,6 +1,6 @@
 package org.cbio.gdcpipeline.reader;
 
-import org.cbio.gdcpipeline.model.cbio.CBioClinicalDataModel;
+import org.cbio.gdcpipeline.model.cbio.ClinicalDataModel;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -18,13 +18,13 @@ import static org.junit.Assert.assertNull;
 /**
  * Created by Dixit on 26/06/17.
  */
-public class ClinicalStreamReaderTest {
+public class ClinicalReaderTest {
 
-    private ClinicalStreamReader clinicalStreamReader;
+    private ClinicalReader clinicalReader;
     @Mock
     private Resource resource;
     @Mock
-    private List<CBioClinicalDataModel> cBioClinicalDataModelList = new ArrayList<>();
+    private List<ClinicalDataModel> clinicalDataModelList = new ArrayList<>();
     @Mock
     private HashMap<String, List<String>> barcodeToSamplesMap;
     @Mock
@@ -34,14 +34,13 @@ public class ClinicalStreamReaderTest {
     @Before
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
-        clinicalStreamReader = new ClinicalStreamReader();
-        clinicalStreamReader.setResource(resource);
+        clinicalReader = new ClinicalReader();
 
     }
 
     @Test
     public void testEmptyRead() throws Exception {
-        assertNull(clinicalStreamReader.read());
+        assertNull(clinicalReader.read());
     }
 
 

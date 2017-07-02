@@ -1,41 +1,32 @@
 package org.cbio.gdcpipeline.processor;
 
-import org.cbio.gdcpipeline.model.cbio.CBioClinicalDataModel;
-import org.cbio.gdcpipeline.model.cbio.SampleFileModel;
+import org.cbio.gdcpipeline.model.cbio.ClinicalDataModel;
+import org.cbio.gdcpipeline.model.cbio.Patient;
 import org.springframework.batch.item.ItemProcessor;
 
-import java.util.ArrayList;
-import java.util.List;
 
-
-public class ClinicalDataProcessor implements ItemProcessor<CBioClinicalDataModel, CBioClinicalDataModel> {
+public class ClinicalDataProcessor implements ItemProcessor<ClinicalDataModel, ClinicalDataModel> {
     @Override
-    public CBioClinicalDataModel process(CBioClinicalDataModel patient) throws Exception {
+    public ClinicalDataModel process(ClinicalDataModel patient) throws Exception {
 
-        //CBioClinicalDataModel modified = modifySampleList(patient);
+        ClinicalDataModel modified = modify(patient);
 
-        //return modified;
+        return modified;
 
-        return patient;
+        //return patient;
 
     }
 
-    protected CBioClinicalDataModel modifySampleList(CBioClinicalDataModel patient) {
+    protected ClinicalDataModel modify(ClinicalDataModel data) {
 
-        //Exclude samples that end with '-10'
-        SampleFileModel modifySample = patient.getSampleFileModel();
-        List<String> sampleList = modifySample.getSample_id();
-        if (sampleList == null || sampleList.isEmpty()) {
-            return patient;
-        }
-        List<String> newList = new ArrayList<>();
-        for (int i = 0; i < sampleList.size(); i++) {
-            String sample = sampleList.get(i);
-            if (!sample.endsWith("-10")) {
-                newList.add(sample);
+
+        if (data instanceof Patient) {
+            if (((Patient) data).getOs_status().equalsIgnoreCase("Alive")) {
+                ((Patient) data).setOs_status("LIVING");
+            } else if (((Patient) data).getOs_status().equalsIgnoreCase("Dead")) {
+                ((Patient) data).setOs_status("DECEASED");
             }
         }
-        patient.getSampleFileModel().setSample_id(newList);
-        return patient;
+        return data;
     }
 }

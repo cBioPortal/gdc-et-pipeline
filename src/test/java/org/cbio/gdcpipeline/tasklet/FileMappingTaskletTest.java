@@ -111,7 +111,7 @@ public class FileMappingTaskletTest {
         ReflectionTestUtils.setField(tasklet, "uuidToFilesMap", uuidToFilesMap);
 
         String expectedPayload = "{\"filters\":{\"op\":\"in\",\"content\":{\"field\":\"cases.case_id\",\"value\":[\"sample_case_id\"]}}," +
-                "\"format\":\"JSON\",\"fields\":\"file_name,cases.case_id\"}";
+                "\"format\":\"JSON\",\"fields\":\"file_name,cases.case_id,data_format\"}";
 
         String actualPayload = tasklet.buildJsonRequest();
 
