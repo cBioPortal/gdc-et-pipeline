@@ -144,7 +144,6 @@ public class FileMappingTasklet implements Tasklet {
         HttpEntity<String> entity = new HttpEntity<String>(payload.toString(), httpHeaders);
 
         ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
-
         if (response.getStatusCode() != HttpStatus.OK) {
             if (LOG.isErrorEnabled()) {
                 LOG.error("Error calling GDC API. Response code is :" + response.getStatusCodeValue()

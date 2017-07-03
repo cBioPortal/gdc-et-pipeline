@@ -3,6 +3,7 @@ package org.cbio.gdcpipeline.JobConfiguration;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.cbio.gdcpipeline.tasklet.FileMappingTasklet;
+import org.cbio.gdcpipeline.tasklet.SetUpPipelineTasklet;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
@@ -56,6 +57,20 @@ public class BatchConfiguration {
     }
 
     @Bean
+    public Step setUpPipeline() {
+        return stepBuilderFactory.get("setUpPipeline")
+                .tasklet(setUpPipelineTasklet())
+                .build();
+    }
+
+    @Bean
+    @StepScope
+    public Tasklet setUpPipelineTasklet() {
+        return new SetUpPipelineTasklet();
+    }
+
+
+    @Bean
     @StepScope
     public Tasklet createFileMappings(){
         return new FileMappingTasklet();
@@ -78,7 +93,8 @@ public class BatchConfiguration {
     @Bean
     public Job mainJob() {
         return jobBuilderFactory.get("mainJob")
-                .start(fileMappingStep())
+                .start(setUpPipeline())
+                .next(fileMappingStep())
                 .next(runClinicalDataStep())
                 .next(runClinicalMetaDataStep())
                 // .next(segmentedDataStep())

@@ -15,26 +15,23 @@ import java.io.*;
  */
 public class ClinicalMetaDataTasklet implements Tasklet {
 
-    @Value("#{jobParameters[sourceDirectory]}")
-    private String sourceDir;
+    private String METADATA_SAMPLE_FILE_NAME = "meta_clinical_sample.txt";
+
+    private String METADATA_PATIENT_FILE_NAME = "meta_clinical_patient.txt";
+
+    //TODO
+    private String DATA_PATIENT_FILE_NAME = "data_clinical_patient.txt";
+
+    //TODO
+    private String DATA_SAMPLE_FILE_NAME = "data_clinical_sample.txt";
+
+    @Value("#{jobParameters[study]}")
+    private String cancer_study_id;
 
     @Value("#{jobParameters[outputDirectory]}")
     private String outputDir;
 
-    @Value("${clinical.metadata.sample.file.name}")
-    private String METADATA_SAMPLE_FILE_NAME;
 
-    @Value("${clinical.metadata.patient.file.name}")
-    private String METADATA_PATIENT_FILE_NAME;
-
-    @Value("${clinical.data.patient.file.name}")
-    private String DATA_PATIENT_FILE_NAME;
-
-    @Value("${clinical.data.sample.file.name}")
-    private String DATA_SAMPLE_FILE_NAME;
-
-    @Value("#{jobParameters[study]}")
-    private String cancer_study_id;
     private final String PATIENT_DATATYPE = "PATIENT_ATTRIBUTES";
     private final String SAMPLE_DATATYPE = "SAMPLE_ATTRIBUTES";
     private final String GENETIC_ALTERATION_TYPE = "CLINICAL";
@@ -49,23 +46,8 @@ public class ClinicalMetaDataTasklet implements Tasklet {
     @Override
     public RepeatStatus execute(StepContribution stepContribution, ChunkContext chunkContext) throws Exception {
 
-        String sampleFile = null;
-        String patientFile = null;
-        if (outputDir == null || outputDir.isEmpty()) {
-            outputDir = sourceDir + File.separator + cancer_study_id + File.separator + "output";
-            File dir = new File(outputDir);
-            dir.mkdir();
-            LOG.info(" No Metadata Output directory specified. Output will be at " + outputDir);
-            sampleFile = outputDir + File.separator + METADATA_SAMPLE_FILE_NAME;
-            patientFile = outputDir + File.separator + METADATA_PATIENT_FILE_NAME;
-        } else {
-            File dir = new File(outputDir);
-            dir.mkdir();
-            LOG.info(" Metadata Output will be at " + outputDir);
-            sampleFile = outputDir + File.separator + METADATA_SAMPLE_FILE_NAME;
-            patientFile = outputDir + File.separator + METADATA_PATIENT_FILE_NAME;
-
-        }
+        String sampleFile = outputDir + File.separator + METADATA_SAMPLE_FILE_NAME;
+        String patientFile = outputDir + File.separator + METADATA_PATIENT_FILE_NAME;
 
         StringBuilder patientString = new StringBuilder();
         patientString
@@ -88,18 +70,19 @@ public class ClinicalMetaDataTasklet implements Tasklet {
                 .append("\n")
                 .append(row4 + DATA_SAMPLE_FILE_NAME);
 
-        try (Writer writer = new BufferedWriter(new OutputStreamWriter(
-                new FileOutputStream(sampleFile), "utf-8"))) {
-            writer.write(sampleString.toString());
-        }
 
+        writeData(patientString.toString(), patientFile);
+        writeData(sampleString.toString(), sampleFile);
 
-        try (Writer writer = new BufferedWriter(new OutputStreamWriter(
-                new FileOutputStream(patientFile), "utf-8"))) {
-            writer.write(patientString.toString());
-        }
         return RepeatStatus.FINISHED;
 
+    }
+
+    private void writeData(String input, String file) throws IOException {
+        try (Writer writer = new BufferedWriter(new OutputStreamWriter(
+                new FileOutputStream(file), "utf-8"))) {
+            writer.write(input.toString());
+        }
     }
 
 
