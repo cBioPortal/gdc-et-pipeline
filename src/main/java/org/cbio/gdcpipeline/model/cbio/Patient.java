@@ -1,7 +1,7 @@
 package org.cbio.gdcpipeline.model.cbio;
 
-import org.apache.tomcat.util.buf.StringUtils;
-import org.cbio.gdcpipeline.model.PatientMetadataManagerImpl;
+import org.cbio.gdcpipeline.model.ClinicalDataSourceImpl;
+import org.cbio.gdcpipeline.model.ClinicalMetadataImpl;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,8 +16,7 @@ public class Patient extends ClinicalDataModel {
     private String sex;
     private int age;
     private String os_status;
-    private String data_file_name = "data_clinical_patient.txt";
-    private String metadata_file_name = "metadata_clinical_patient.txt";
+    private ClinicalDataSourceImpl clinicalDataSource = new ClinicalDataSourceImpl();
 
 
     public Patient() {
@@ -35,29 +34,19 @@ public class Patient extends ClinicalDataModel {
     public List<String> getFields() {
         List<String> fields = new ArrayList<>();
         fields.add("Patient_id");
-        fields.add("Sex");
-        fields.add("Age");
         fields.add("Os_status");
-        fields.add("Data_file_name");
-        fields.add("Metadata_file_name");
+        fields.add("Age");
+        fields.add("Sex");
+
 
         return fields;
     }
 
+
     @Override
-    public String getHeaders() {
-        PatientMetadataManagerImpl headers = new PatientMetadataManagerImpl();
-        return this.makeHeader(headers.getFullHeader());
-    }
-
-    private String makeHeader(Map<String, List<String>> fullHeader) {
-        StringBuilder header = new StringBuilder();
-
-        for (Map.Entry<String, List<String>> entry : fullHeader.entrySet()) {
-            header.append(StringUtils.join(entry.getValue(), ','));
-            header.append("\n");
-        }
-        return header.toString();
+    public Map<String, List<String>> getHeaders() {
+        ClinicalMetadataImpl headers = new ClinicalMetadataImpl();
+        return (headers.getFullHeader(getFields()));
     }
 
     public String getPatient_id() {
@@ -66,24 +55,6 @@ public class Patient extends ClinicalDataModel {
 
     public void setPatient_id(String patient_id) {
         this.patient_id = patient_id;
-    }
-
-
-    public String getMetadata_file_name() {
-        return metadata_file_name;
-    }
-
-    public void setMetadata_file_name(String metadata_file_name) {
-        this.metadata_file_name = metadata_file_name;
-    }
-
-
-    public String getData_file_name() {
-        return data_file_name;
-    }
-
-    public void setData_file_name(String data_file_name) {
-        this.data_file_name = data_file_name;
     }
 
     public String getSex() {
@@ -103,11 +74,12 @@ public class Patient extends ClinicalDataModel {
     }
 
     public String getOs_status() {
+
         return os_status;
     }
 
     public void setOs_status(String os_status) {
-        this.os_status = os_status;
+        this.os_status = this.clinicalDataSource.getAcceptableClinicalFieldValue(os_status);
     }
 
 }

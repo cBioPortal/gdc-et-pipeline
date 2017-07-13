@@ -22,14 +22,16 @@ public class GDCPipelineApplication {
 	private static Log LOG = LogFactory.getLog(GDCPipelineApplication.class);
 
 	private final static String MAIN_JOB = "mainJob";
+	private final String DEFAULT_RUN_STEP = "ALL";
 
 	private static Options getOptions(String []input){
 		Options options = new Options();
         options.addOption("s","source",true,"source directory for files");
 		options.addOption("o","output",true,"output directory for files");
 		options.addOption("study", "study", true, "Cancer Study Id");
-		options.addOption("filter_sample", "filter_sample", false, "True or False. Flag to filter Normal samples. Default is True ");
-		options.addOption("h", "help", false, "shows this help document and quits.");
+		options.addOption("filter_sample", "filter_sample", true, "True or False. Flag to filter Normal samples. Default is True ");
+		options.addOption("runstep", "runstep", true, "Steps to run. Default is All");
+		options.addOption("h", "help", true, "shows this help document and quits.");
 		return options;
 	}
 
@@ -42,7 +44,7 @@ public class GDCPipelineApplication {
 		System.exit(exitStatus);
 	}
 
-	private static void launchJob(String[] args, String sourceDirectory, String outputDirectory, String study, String filter_sample) throws Exception {
+	private static void launchJob(String[] args, String sourceDirectory, String outputDirectory, String study, String filter_sample, String run_step) throws Exception {
 		SpringApplication app = new SpringApplication(GDCPipelineApplication.class);
 		ApplicationContext ctx= app.run(args);
 		Job mainJob = ctx.getBean(MAIN_JOB, Job.class);
@@ -56,6 +58,7 @@ public class GDCPipelineApplication {
 				.addString("outputDirectory", outputDirectory)
                 .addString("study", study)
 				.addString("filter_sample", filter_sample)
+				.addString("runstep", run_step)
 				.addString("time",time)
 				.toJobParameters();
 		JobExecution jobExecution = jobLauncher.run(mainJob, jobParameters);
@@ -83,7 +86,12 @@ public class GDCPipelineApplication {
 			GDCPipelineApplication.help(options, 0, "study");
 		}
 
-		//TODO create a common validator
+		String run_step = "ALL";
+		if (cli.hasOption("runstep")) {
+			run_step = cli.getOptionValue("runstep");
+		}
+
+		//TODO create a common validator ?
 		String filter_sample = "true";
 		if (cli.hasOption("filter_sample")) {
 			if (cli.getOptionValue("filter_sample").toLowerCase().equals("false")) {
@@ -93,7 +101,7 @@ public class GDCPipelineApplication {
 			}
 		}
 
-		launchJob(args, cli.getOptionValue("source"), cli.getOptionValue("output"), cli.getOptionValue("study"), filter_sample);
+		launchJob(args, cli.getOptionValue("source"), cli.getOptionValue("output"), cli.getOptionValue("study"), filter_sample, run_step);
 
 	}
 }

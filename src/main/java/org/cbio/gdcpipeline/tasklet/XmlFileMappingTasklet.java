@@ -39,9 +39,9 @@ import java.util.Map;
  * @author Dixit Patel
  */
 
-public class FileMappingTasklet implements Tasklet {
+public class XmlFileMappingTasklet implements Tasklet {
 
-    private static Log LOG = LogFactory.getLog(FileMappingTasklet.class);
+    private static Log LOG = LogFactory.getLog(XmlFileMappingTasklet.class);
 
     @Value("#{jobParameters[sourceDirectory]}")
     private String sourceDir;
@@ -201,20 +201,23 @@ public class FileMappingTasklet implements Tasklet {
     protected void addDataToMap(GdcApiResponse resp) {
         //Map : case_id --> file_name
 
-        List<String> maf_file = new ArrayList<>();
+        List<String> maf_files = new ArrayList<>();
         for (Hits hit : resp.getData().getHits()) {
 
             if (hit.getData_format().equalsIgnoreCase("MAF")) {
-                maf_file.add(hit.getFile_name());
+                maf_files.add(hit.getFile_name());
             } else {
                 String case_id = getCaseIdFromResponse(hit);
                 uuidToFilesMap.get(case_id).add(hit.getFile_name());
             }
         }
-        uuidToFilesMap.put("MAF_FILES", maf_file);
+        for (Map.Entry<String, List<String>> entry : uuidToFilesMap.entrySet()) {
+            List<String> files = entry.getValue();
+            files.addAll(maf_files);
+        }
     }
 
-    protected RepeatStatus gdcApiRequest(String payload) throws Exception {
+    protected void gdcApiRequest(String payload) throws Exception {
 
         int callCount = 0;
         int totalCallCount = 1;
@@ -238,7 +241,6 @@ public class FileMappingTasklet implements Tasklet {
             }
             from = callCount * MAX_RESPONSE_SIZE + 1;
         }
-        return RepeatStatus.FINISHED;
     }
 
     @Override
@@ -246,11 +248,11 @@ public class FileMappingTasklet implements Tasklet {
 
         long startTime = System.currentTimeMillis();
 
-        File projectDir = new File(sourceDir + File.separator + cancer_study_id);
+        File source = new File(sourceDir);
 
         List<File> xmlFiles = new ArrayList<>();
-        for (File file : projectDir.listFiles()) {
-            if (!file.isDirectory()) {
+        for (File file : source.listFiles()) {
+            if (file.isFile()) {
                 if (file.getName().endsWith(".xml") && file.getName().contains("biospecimen")) {
                     xmlFiles.add(file);
                 }
@@ -265,7 +267,9 @@ public class FileMappingTasklet implements Tasklet {
 
         for (File biospecimenXML : xmlFiles) {
 
-            LOG.info("Processing file : " + biospecimenXML.getName());
+            if (LOG.isInfoEnabled()) {
+                LOG.info("Processing file : " + biospecimenXML.getName());
+            }
             //JAXB
             try {
                 xmlUnmarshall(biospecimenXML);
@@ -275,11 +279,12 @@ public class FileMappingTasklet implements Tasklet {
                     LOG.error(" Skipping File :" + biospecimenXML.getName());
                 }
             }
+            break;
         }
 
         String payload = buildJsonRequest();
 
-        RepeatStatus status = gdcApiRequest(payload);
+        gdcApiRequest(payload);
 
         chunkContext.getStepContext()
                 .getStepExecution()
@@ -292,7 +297,7 @@ public class FileMappingTasklet implements Tasklet {
                 .put("uuidToFilesMap", uuidToFilesMap);
 
 
-        return status;
+        return RepeatStatus.FINISHED;
     }
 
 }

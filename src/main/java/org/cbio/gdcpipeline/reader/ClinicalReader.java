@@ -65,10 +65,16 @@ public class ClinicalReader implements ItemStreamReader<ClinicalDataModel> {
             throw new ItemStreamException("Empty Clinical Files list");
         }
 
+        List<String> skippedList = new ArrayList<>();
         for (String clinicalFile : clinicalFileNames) {
-            File file = new File(sourceDir + File.separator + cancer_study_id + File.separator + clinicalFile);
+            File file = new File(sourceDir + File.separator + clinicalFile);
             if (!file.exists()) {
-                throw new ItemStreamException(" Resource Error. File does not exists : " + file.getAbsolutePath());
+                if (LOG.isErrorEnabled()) {
+                    LOG.error("Resource Error. File does not exists : " + file.getAbsolutePath());
+                    LOG.error("Skipping file");
+                }
+                skippedList.add(clinicalFile);
+                continue;
             }
 
             try {
@@ -96,9 +102,24 @@ public class ClinicalReader implements ItemStreamReader<ClinicalDataModel> {
 
             }
 
+            if (!skippedList.isEmpty()) {
+                removeFromSampleMap(skippedList);
+            }
+
         }
 
 
+    }
+
+    private void removeFromSampleMap(List<String> skippedList) {
+
+        for (String file : skippedList) {
+            String sample = file.substring(file.indexOf("TCGA")).replace(".xml", "");
+            if (LOG.isInfoEnabled()) {
+                LOG.info(" Removing sample :" + sample + " from map");
+            }
+            barcodeToSamplesMap.remove(sample);
+        }
     }
 
     //TODO Non-TCGA
@@ -144,14 +165,16 @@ public class ClinicalReader implements ItemStreamReader<ClinicalDataModel> {
             }
             throw new ItemStreamException("Empty File Map");
         }
+
+        File source = new File(sourceDir);
         List<String> fileNames = new ArrayList<>();
-        for (Map.Entry<String, List<String>> entry : uuidToFilesMap.entrySet()) {
-            for (String file : entry.getValue()) {
-                if (file.endsWith(".xml") && file.contains("clinical")) {
-                    fileNames.add(file);
-                }
+        for (String file : source.list()) {
+            if (file.endsWith(".xml") && file.contains("clinical")) {
+                fileNames.add(file);
             }
+
         }
+
         return fileNames;
     }
 

@@ -10,7 +10,9 @@ import org.springframework.beans.factory.annotation.Value;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 
 /**
  * Created by Dixit on 03/07/17.
@@ -38,6 +40,13 @@ public class SetUpPipelineTasklet implements Tasklet {
         validateCancerStudy();
         createOutputDirectory();
         validateSourceDirectory();
+        List<File> filesToExtract = getCompressedFiles();
+        if (!filesToExtract.isEmpty()) {
+            if (LOG.isInfoEnabled()) {
+                LOG.info("Extracting compressed files in source directory. Total = " + filesToExtract.size());
+            }
+            extractFiles(filesToExtract);
+        }
 
 
         if (LOG.isInfoEnabled()) {
@@ -45,6 +54,25 @@ public class SetUpPipelineTasklet implements Tasklet {
         }
         return RepeatStatus.FINISHED;
 
+
+    }
+
+    private void extractFiles(List<File> filesToExtract) {
+        //TODO
+
+    }
+
+    private List<File> getCompressedFiles() {
+        File source = new File(sourceDir);
+        List<File> filesToExtract = new ArrayList<>();
+        for (File file : source.listFiles()) {
+            if (file.isFile()) {
+                if (file.getName().endsWith(".gz") || file.getName().endsWith(".tar")) {
+                    filesToExtract.add(file);
+                }
+            }
+        }
+        return filesToExtract;
 
     }
 

@@ -1,7 +1,6 @@
 package org.cbio.gdcpipeline.model.cbio;
 
-import org.apache.tomcat.util.buf.StringUtils;
-import org.cbio.gdcpipeline.model.SampleMetadataManagerImpl;
+import org.cbio.gdcpipeline.model.ClinicalMetadataImpl;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,16 +14,6 @@ public class Sample extends ClinicalDataModel {
     private String patient_id;
     private String sample_id;
     private String oncotree_code;
-    private String data_file_name = "data_clinical_sample.txt";
-    private String metadata_file_name = "metadata_clinical_sample.txt";
-
-    public String getData_file_name() {
-        return data_file_name;
-    }
-
-    public void setData_file_name(String data_file_name) {
-        this.data_file_name = data_file_name;
-    }
 
     public Sample() {
     }
@@ -46,19 +35,9 @@ public class Sample extends ClinicalDataModel {
     }
 
     @Override
-    public String getHeaders() {
-        SampleMetadataManagerImpl headers = new SampleMetadataManagerImpl();
-        return this.makeHeader(headers.getFullHeader());
-    }
-
-    private String makeHeader(Map<String, List<String>> fullHeader) {
-        StringBuilder header = new StringBuilder();
-
-        for (Map.Entry<String, List<String>> entry : fullHeader.entrySet()) {
-            header.append(StringUtils.join(entry.getValue(), ','));
-            header.append("\n");
-        }
-        return header.toString();
+    public Map<String, List<String>> getHeaders() {
+        ClinicalMetadataImpl headers = new ClinicalMetadataImpl();
+        return (headers.getFullHeader(getFields()));
     }
 
     public String getPatient_id() {

@@ -4,10 +4,12 @@ import com.google.gson.Gson;
 import org.apache.commons.logging.LogFactory;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.http.*;
@@ -16,7 +18,6 @@ import org.springframework.web.client.RestTemplate;
 
 import java.io.File;
 import java.io.FileReader;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -30,9 +31,9 @@ import static org.powermock.api.mockito.PowerMockito.when;
  * Created by Dixit on 26/06/17.
  */
 
-@PrepareForTest({FileMappingTasklet.class, LogFactory.class})
-//@RunWith(PowerMockRunner.class)
-public class FileMappingTaskletTest {
+@PrepareForTest({XmlFileMappingTasklet.class, LogFactory.class})
+@RunWith(PowerMockRunner.class)
+public class XmlFileMappingTaskletTest {
 
     File sourceDir;
     String cancer_study_id;
@@ -47,13 +48,13 @@ public class FileMappingTaskletTest {
     @Mock
     RestTemplate restTemplate;
 
-    private FileMappingTasklet tasklet;
+    private XmlFileMappingTasklet tasklet;
 
     @Before
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
         setProperties();
-        tasklet = new FileMappingTasklet();
+        tasklet = new XmlFileMappingTasklet();
     }
 
     public void setProperties() throws Exception {
@@ -71,7 +72,7 @@ public class FileMappingTaskletTest {
     }
 
 
-    //@Test(expected = java.lang.Exception.class)
+    @Test(expected = java.lang.Exception.class)
     public void testExecuteEmptyBiospecimenFileList() throws Exception {
         ReflectionTestUtils.setField(tasklet, "sourceDir", sourceDir.getAbsolutePath());
         ReflectionTestUtils.setField(tasklet, "cancer_study_id", cancer_study_id);
@@ -83,35 +84,32 @@ public class FileMappingTaskletTest {
 
     }
 
-    @Test//(expected = java.lang.Exception.class)
-    public void testCallGdcApiNullResponse() throws Exception {
+    @Test(expected = java.lang.Exception.class)
+    public void testCallGdcApiServiceUnavailable() throws Exception {
 
         ReflectionTestUtils.setField(tasklet, "GDC_API_ENDPOINT", GDC_API_ENDPOINT);
         ReflectionTestUtils.setField(tasklet, "MAX_RESPONSE_SIZE", MAX_RESPONSE_SIZE);
         HashMap<String, List<String>> uuidToFilesMap = new HashMap<>();
         uuidToFilesMap.put("sample", new ArrayList<>());
         ReflectionTestUtils.setField(tasklet, "uuidToFilesMap", uuidToFilesMap);
+
         ResponseEntity<String> response = new ResponseEntity<String>(HttpStatus.INTERNAL_SERVER_ERROR);
 
         RestTemplate restTemplate = mock(RestTemplate.class);
+        ReflectionTestUtils.setField(tasklet, "restTemplate", restTemplate);
+
         HttpHeaders httpHeaders = new HttpHeaders();
         httpHeaders.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> entity = new HttpEntity<String>("", httpHeaders);
 
 
-        when(restTemplate.exchange(GDC_API_ENDPOINT, HttpMethod.POST, entity, String.class)).thenThrow(new IOException());
-
-
-        System.out.print("ahdladlaskdasdmasdasd");
+        when(restTemplate.exchange(GDC_API_ENDPOINT, HttpMethod.POST, entity, String.class)).thenReturn(response);
 
         tasklet.callGdcApi(GDC_API_ENDPOINT, "");
 
-
-
-
     }
 
-    //@Test
+    @Test
     public void testBuildJsonRequestIsValidJson() {
         Gson gson = new Gson();
         HashMap<String, List<String>> uuidToFilesMap = new HashMap<>();
@@ -128,41 +126,31 @@ public class FileMappingTaskletTest {
 
     }
 
-    // @Test
-    public void testGdcApiServiceUnavailable() throws Exception {
-
+//    @Test
+//    public void testXmlUnmarshall(){
+//
+//        ClassLoader classLoader = getClass().getClassLoader();
+//        Properties p = new Properties();
+//
+//        File file = new File(classLoader.getResource("data").getFile());
+//        File testXml = new File(file.getAbsolutePath() + File.separator + "GDC/TCGA_BRCA/test_biospecimen.TCGA-3C-AAAU.xml");
 //        HashMap<String, List<String>> uuidToFilesMap = new HashMap<>();
-//        PowerMockito.mockStatic(LogFactory.class);
-//        Log LOG = PowerMockito.mock(Log.class);
-//        //when(LogFactory.getLog(any(Class.class))).thenReturn(LOG);
-//        ResponseEntity<String> response = new ResponseEntity<String>(HttpStatus.INTERNAL_SERVER_ERROR);
-//
-//        //FileMappingTasklet tasklet = PowerMockito.mock(FileMappingTasklet.class);
-//        //RestTemplate restTemplate = PowerMockito.mock( RestTemplate.class);
-//
-//        ReflectionTestUtils.setField(tasklet, "GDC_API_ENDPOINT", GDC_API_ENDPOINT);
-//        ReflectionTestUtils.setField(tasklet, "MAX_RESPONSE_SIZE", MAX_RESPONSE_SIZE);
-//        uuidToFilesMap.put("sample_case_id", new ArrayList<>());
+//        HashMap<String, List<String>> barcodeToSamplesMap = new HashMap<>();
 //        ReflectionTestUtils.setField(tasklet, "uuidToFilesMap", uuidToFilesMap);
+//        ReflectionTestUtils.setField(tasklet, "barcodeToSamplesMap", barcodeToSamplesMap);
 //
-//        HttpEntity<String> entity = new HttpEntity<String>("", new HttpHeaders());
+//        try {
+//            tasklet.xmlUnmarshall(testXml);
+//        } catch (JAXBException e) {
+//            e.printStackTrace();
+//        }
 //
-//
-//        String url = GDC_API_ENDPOINT+"?from=1&size=1";
-//
-//        doReturn(response).when(restTemplate).exchange(url,HttpMethod.POST, entity,String.class);
-//        PowerMockito.whenNew(RestTemplate.class).withNoArguments().thenReturn(restTemplate);
-//        //ReflectionTestUtils.setField(tasklet, "restTemplate", restTemplate);
-//
-//        //PowerMockito.when(rest,"exchange").thenReturn(response);
-//
-//
-//        tasklet.callGdcApi(url,"");
-//
-//        verify(LOG).error("Error calling GDC API. Response code is : 500 Response Message is " + response.getStatusCode().getReasonPhrase());
-//        RepeatStatus status = tasklet.gdcApiRequest("");
+//        System.out.print(uuidToFilesMap.isEmpty());
+//        System.out.print(uuidToFilesMap.isEmpty());
 //
 //
-    }
+//
+//    }
+
 
 }

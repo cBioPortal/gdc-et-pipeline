@@ -8,6 +8,6 @@ import java.util.Map;
  */
 public interface MetadataManager {
 
-    Map<String, List<String>> getFullHeader();
+    Map<String, List<String>> getFullHeader(List<String> header);
 
 }
