@@ -60,8 +60,8 @@ public class ClinicalMetaDataTasklet implements Tasklet {
         sample.put("datatype", "SAMPLE_ATTRIBUTES");
         sample.put("data_filename", DATA_SAMPLE_FILE_NAME);
 
-        MetaFileWriter.writeHeaders(patient, patientFile);
-        MetaFileWriter.writeHeaders(sample, sampleFile);
+        MetaFileWriter.writeMetadata(patient, patientFile);
+        MetaFileWriter.writeMetadata(sample, sampleFile);
 
         return RepeatStatus.FINISHED;
 

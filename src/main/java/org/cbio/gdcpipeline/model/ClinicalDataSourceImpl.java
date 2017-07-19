@@ -9,81 +9,81 @@ import java.util.Map;
  */
 public class ClinicalDataSourceImpl implements ClinicalDataSource {
 
-    private Map<String, String> clinicalFieldMap = new HashMap<>();
-
     public enum OS_STATUS {LIVING, DECEASED}
-
-    ;
+    private Map<String, String> clinicalFieldMap = initClinicalFieldValues();
 
     public ClinicalDataSourceImpl() {
-        addAcceptedClinicalFieldValue("alive", OS_STATUS.LIVING.toString());
-        addAcceptedClinicalFieldValue("dead", OS_STATUS.DECEASED.toString());
     }
 
-    private void addAcceptedClinicalFieldValue(String key, String value) {
-        this.clinicalFieldMap.put(key.toLowerCase(), value);
-    }
-
-    @Override
-    public List<Map<String, String>> getClinicalData() {
-        return null;
+    private Map<String,String> initClinicalFieldValues() {
+        Map<String, String> map = new HashMap<>();
+        map.put("alive", OS_STATUS.LIVING.toString());
+        map.put("dead", OS_STATUS.DECEASED.toString());
+        return map;
     }
 
     @Override
-    public List<String> getSampleHeader() {
-        return null;
-    }
-
-    @Override
-    public List<String> getPatientHeader() {
-        return null;
-    }
-
-    @Override
-    public List<String> getTimelineHeader() {
-        return null;
-    }
-
-    @Override
-    public List<Map<String, String>> getTimelineData() {
-        return null;
-    }
-
-    @Override
-    public String getNextClinicalStudyId() {
-        return null;
-    }
-
-    @Override
-    public String getNextTimelineStudyId() {
-        return null;
-    }
-
-    @Override
-    public boolean hasMoreTimelineData() {
-        return false;
-    }
-
-    @Override
-    public boolean hasMoreClinicalData() {
-        return false;
-    }
-
-    @Override
-    public Map<String, List<String>> getFullPatientHeader(Map<String, List<String>> fullHeader) {
-        return null;
-    }
-
-    @Override
-    public Map<String, List<String>> getFullSampleHeader(Map<String, List<String>> fullHeader) {
-        return null;
-    }
-
-    @Override
-    public String getAcceptableClinicalFieldValue(String key) {
+    public String getNormalizedClinicalFieldValue(String key) {
         if (!key.isEmpty()) {
             return this.clinicalFieldMap.get(key.toLowerCase());
         }
         return null;
     }
+
+    @Override
+    public List<Map<String, String>> getClinicalData() {
+        throw new UnsupportedOperationException("Not Supported Yet");
+    }
+
+    @Override
+    public List<String> getSampleHeader() {
+        throw new UnsupportedOperationException("Not Supported Yet");
+    }
+
+    @Override
+    public List<String> getPatientHeader() {
+        throw new UnsupportedOperationException("Not Supported Yet");
+    }
+
+    @Override
+    public List<String> getTimelineHeader() {
+        throw new UnsupportedOperationException("Not Supported Yet");
+    }
+
+    @Override
+    public List<Map<String, String>> getTimelineData() {
+        throw new UnsupportedOperationException("Not Supported Yet");
+    }
+
+    @Override
+    public String getNextClinicalStudyId() {
+        throw new UnsupportedOperationException("Not Supported Yet");
+    }
+
+    @Override
+    public String getNextTimelineStudyId() {
+        throw new UnsupportedOperationException("Not Supported Yet");
+    }
+
+    @Override
+    public boolean hasMoreTimelineData() {
+        throw new UnsupportedOperationException("Not Supported Yet");
+    }
+
+    @Override
+    public boolean hasMoreClinicalData() {
+        throw new UnsupportedOperationException("Not Supported Yet");
+    }
+
+    @Override
+    public Map<String, List<String>> getFullPatientHeader(Map<String, List<String>> fullHeader) {
+        throw new UnsupportedOperationException("Not Supported Yet");
+    }
+
+    @Override
+    public Map<String, List<String>> getFullSampleHeader(Map<String, List<String>> fullHeader) {
+        throw new UnsupportedOperationException("Not Supported Yet");
+    }
+
+
 }

@@ -2,47 +2,42 @@ package org.cbio.gdcpipeline.util;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.tomcat.util.buf.StringUtils;
 
 import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
  * Created by Dixit on 08/07/17.
  */
 public class MetaFileWriter {
-
-    private static String header;
-
+    private static String metadata;
     private static Log LOG = LogFactory.getLog(MetaFileWriter.class);
 
-    public static void makeHeaders(Map<String, String> headers) {
-        if (!headers.isEmpty()) {
-            StringBuilder sb = new StringBuilder();
-            for (Map.Entry<String, String> entry : headers.entrySet()) {
-                sb.append("\n").append(entry.getKey()).append(": ").append(entry.getValue());
+    public static void makeMetadata(Map<String, String> fields) {
+        if (!fields.isEmpty()) {
+            List<String> data = new ArrayList<>();
+            for (Map.Entry<String, String> entry : fields.entrySet()) {
+                data.add(entry.getKey() + ": " + entry.getValue());
             }
-            //remove first line break
-            sb.delete(0, 1);
-            header = sb.toString();
+            metadata = StringUtils.join(data, '\n');
         }
-
     }
 
-    public static void writeHeaders(Map<String, String> headers, String file_path) throws Exception {
-
-        makeHeaders(headers);
-
+    public static void writeMetadata(Map<String, String> fields, String file_path) throws Exception {
+        makeMetadata(fields);
         File filename = new File(file_path);
-        if (header.isEmpty() || header == null) {
+        if (metadata.isEmpty()) {
             if (LOG.isErrorEnabled()) {
-                LOG.error("Meta file Headers are not set");
+                LOG.error("Metadata is empty. Nothing to write");
             }
             throw new Exception();
         }
         try (Writer writer = new BufferedWriter(new OutputStreamWriter(
                 new FileOutputStream(filename), "utf-8"))) {
-            writer.write(header);
+            writer.write(metadata);
         }
-
     }
 }

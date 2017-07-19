@@ -79,7 +79,7 @@ public class Patient extends ClinicalDataModel {
     }
 
     public void setOs_status(String os_status) {
-        this.os_status = this.clinicalDataSource.getAcceptableClinicalFieldValue(os_status);
+        this.os_status = this.clinicalDataSource.getNormalizedClinicalFieldValue(os_status);
     }
 
 }

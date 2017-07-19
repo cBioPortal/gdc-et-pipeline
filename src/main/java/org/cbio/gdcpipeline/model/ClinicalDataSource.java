@@ -30,6 +30,6 @@ public interface ClinicalDataSource {
 
     Map<String, List<String>> getFullSampleHeader(Map<String, List<String>> fullHeader);
 
-    String getAcceptableClinicalFieldValue(String field);
+    String getNormalizedClinicalFieldValue(String field);
 }
 

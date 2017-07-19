@@ -46,7 +46,6 @@ public class ClinicalReader implements ItemStreamReader<ClinicalDataModel> {
 
     private List<ClinicalDataModel> clinicalDataModelList = new ArrayList<>();
 
-
     @Override
     public ClinicalDataModel read() throws Exception {
         if (!this.clinicalDataModelList.isEmpty()) {
@@ -57,38 +56,21 @@ public class ClinicalReader implements ItemStreamReader<ClinicalDataModel> {
 
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException {
-
-
-        List<String> clinicalFileNames = getClinicalFileList();
+        List<File> clinicalFileNames = getClinicalFileList();
 
         if (clinicalFileNames.isEmpty()) {
             throw new ItemStreamException("Empty Clinical Files list");
         }
-
-        List<String> skippedList = new ArrayList<>();
-        for (String clinicalFile : clinicalFileNames) {
-            File file = new File(sourceDir + File.separator + clinicalFile);
-            if (!file.exists()) {
-                if (LOG.isErrorEnabled()) {
-                    LOG.error("Resource Error. File does not exists : " + file.getAbsolutePath());
-                    LOG.error("Skipping file");
-                }
-                skippedList.add(clinicalFile);
-                continue;
-            }
-
+        for (File clinicalFile : clinicalFileNames) {
             try {
-                TcgaBcr tcgaBcr = unmarshall(file);
-                addPatient(tcgaBcr);
-                addSamples(tcgaBcr);
+                TcgaBcr tcgaBcr = unmarshall(clinicalFile);
+                addData(tcgaBcr);
             } catch (JAXBException e) {
                 if (LOG.isErrorEnabled()) {
-                    LOG.error("Unmarshalling error for file " + file.getName());
+                    LOG.error("Unmarshalling error. Skipping file " + clinicalFile.getName());
                 }
-                throw new ItemStreamException(" Error while Unmarshalling");
+                continue;
             }
-
-
             if (filter_sample_flag.equalsIgnoreCase("true")) {
                 for (int m = 0; m < this.clinicalDataModelList.size(); m++) {
                     ClinicalDataModel c = this.clinicalDataModelList.get(m);
@@ -97,97 +79,70 @@ public class ClinicalReader implements ItemStreamReader<ClinicalDataModel> {
                             clinicalDataModelList.remove(m);
                         }
                     }
-
                 }
-
             }
-
-            if (!skippedList.isEmpty()) {
-                removeFromSampleMap(skippedList);
-            }
-
-        }
-
-
-    }
-
-    private void removeFromSampleMap(List<String> skippedList) {
-
-        for (String file : skippedList) {
-            String sample = file.substring(file.indexOf("TCGA")).replace(".xml", "");
-            if (LOG.isInfoEnabled()) {
-                LOG.info(" Removing sample :" + sample + " from map");
-            }
-            barcodeToSamplesMap.remove(sample);
         }
     }
-
-    //TODO Non-TCGA
 
     private TcgaBcr unmarshall(File xmlFile) throws JAXBException {
-
         JAXBContext jaxbContext = JAXBContext.newInstance(TcgaBcr.class);
         Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
-
         // root
         TcgaBcr tcgaBcr = (TcgaBcr) unmarshaller.unmarshal(xmlFile);
-
         return tcgaBcr;
-
     }
 
-    private void addPatient(TcgaBcr tcgaBcr) {
-        ClinicalDataModel patient = new Patient(
-                tcgaBcr.getPatient().getBcrPatientBarcode().getValue(),
-                tcgaBcr.getPatient().getVitalStatus().getValue(),
-                tcgaBcr.getPatient().getGender().getValue(),
-                Integer.parseInt(tcgaBcr.getPatient().getAgeAtInitialPathologicDiagnosis().getValue()));
-        this.clinicalDataModelList.add(patient);
-    }
+    private void addData(TcgaBcr tcgaBcr) {
+        String barcode = tcgaBcr.getPatient().getBcrPatientBarcode().getValue();
+        if (!barcodeToSamplesMap.containsKey(barcode)) {
+            if (LOG.isErrorEnabled()) {
+                LOG.error("Biospecimen file for Barcode : " + barcode + " does not exist");
+                LOG.error("Skipping File");
+            }
+        } else {
+            List<String> sampleList = barcodeToSamplesMap.get(barcode);
+            // patient
+            ClinicalDataModel patient = new Patient(
+                    barcode,
+                    tcgaBcr.getPatient().getVitalStatus().getValue(),
+                    tcgaBcr.getPatient().getGender().getValue(),
+                    Integer.parseInt(tcgaBcr.getPatient().getAgeAtInitialPathologicDiagnosis().getValue()));
+            this.clinicalDataModelList.add(patient);
 
-    private void addSamples(TcgaBcr tcgaBcr) {
+            //sample
 
-        List<String> sampleList = barcodeToSamplesMap.get(tcgaBcr.getPatient().getBcrPatientBarcode().getValue());
-        for (String sample_id : sampleList) {
-            this.clinicalDataModelList.add(new Sample(
-                    tcgaBcr.getPatient().getBcrPatientBarcode().getValue(),
-                    sample_id,
-                    oncotree_code
-            ));
+            for (String sample_id : sampleList) {
+                this.clinicalDataModelList.add(new Sample(
+                        tcgaBcr.getPatient().getBcrPatientBarcode().getValue(),
+                        sample_id,
+                        oncotree_code
+                ));
+            }
         }
     }
 
-
-    private List<String> getClinicalFileList() throws ItemStreamException {
+    private List<File> getClinicalFileList() throws ItemStreamException {
         if (uuidToFilesMap.isEmpty()) {
             if (LOG.isErrorEnabled()) {
                 LOG.error(" UUID to Files Map is Empty.");
             }
             throw new ItemStreamException("Empty File Map");
         }
-
         File source = new File(sourceDir);
-        List<String> fileNames = new ArrayList<>();
-        for (String file : source.list()) {
-            if (file.endsWith(".xml") && file.contains("clinical")) {
+        List<File> fileNames = new ArrayList<>();
+        for (File file : source.listFiles()) {
+            if (file.getName().endsWith(".xml") && file.getName().contains("clinical")) {
                 fileNames.add(file);
             }
-
         }
-
         return fileNames;
     }
 
-
     @Override
     public void update(ExecutionContext executionContext) throws ItemStreamException {
-
     }
 
     @Override
     public void close() throws ItemStreamException {
-
-
     }
-
 }

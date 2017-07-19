@@ -8,10 +8,7 @@ import org.cbio.gdcpipeline.tasklet.SetUpPipelineTasklet;
 import org.cbio.gdcpipeline.tasklet.XmlFileMappingTasklet;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
-import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
-import org.springframework.batch.core.configuration.annotation.JobScope;
-import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
-import org.springframework.batch.core.configuration.annotation.StepScope;
+import org.springframework.batch.core.configuration.annotation.*;
 import org.springframework.batch.core.job.builder.FlowBuilder;
 import org.springframework.batch.core.job.flow.Flow;
 import org.springframework.batch.core.job.flow.JobExecutionDecider;
@@ -24,11 +21,10 @@ import org.springframework.context.annotation.Configuration;
 
 import javax.annotation.Resource;
 
+@EnableBatchProcessing
 @Configuration
 public class BatchConfiguration {
-
     private static Log LOG = LogFactory.getLog(BatchConfiguration.class);
-
     @Autowired
     JobBuilderFactory jobBuilderFactory;
 
@@ -40,12 +36,6 @@ public class BatchConfiguration {
 
     @Resource(name = "clinicalMetaDataStep")
     Step clinicalMetaDataStep;
-
-    @Resource(name = "mutationDataStep")
-    Step mutationDataStep;
-
-    @Resource(name = "mutationMetaDataStep")
-    Step mutationMetaDataStep;
 
     @Value("${chunk.interval}")
     private int chunkInterval;
@@ -102,37 +92,25 @@ public class BatchConfiguration {
                 .from(clinicalFileTypeDecider()).on("XLSX").fail()
                 .from(clinicalFileTypeDecider()).on("FAIL").fail()
                 .build();
-
     }
+
     @Bean
     public Flow clinicalDataFlow() {
         return new FlowBuilder<Flow>("clinicalDataFlow")
                 .start(clinicalDataStep)
                 .next(clinicalMetaDataStep)
                 .build();
-
     }
 
-    @Bean
-    public Flow mutationDataFlow() {
-        return new FlowBuilder<Flow>("mutationDataFlow")
-                .start(mutationDataStep)
-                .from(mutationDataStep).on("CONTINUE").to(mutationDataStep)
-                .next(mutationMetaDataStep)
-                .build();
-
-    }
-
-    @StepScope
+    @JobScope
     public JobExecutionDecider stepDecider() {
         return new StepDecider();
     }
 
     @Bean
-    public Flow completeFlow() {
-        return new FlowBuilder<Flow>("completeFlow")
+    public Flow gdcPipelineFlow() {
+        return new FlowBuilder<Flow>("gdcPipelineFlow")
                 .start(clinicalDataFlow())
-                .next(mutationDataFlow())
                 .build();
     }
 
@@ -140,22 +118,19 @@ public class BatchConfiguration {
     public Flow buildFlow() {
         return new FlowBuilder<Flow>("buildFlow")
                 .start(stepDecider())
-                .on(StepDecider.STEP.ALL.toString()).to(completeFlow())
+                .on(StepDecider.STEP.ALL.toString()).to(gdcPipelineFlow())
                 .on(StepDecider.STEP.CLINICAL.toString()).to(clinicalDataFlow())
-                .on(StepDecider.STEP.MUTATION.toString()).to(mutationDataFlow())
+                .on(StepDecider.STEP.MUTATION.toString()).fail()
                 .build();
     }
 
-
     // Flow of All Steps
-
     @Bean
-    public Job mainJob() {
-        return jobBuilderFactory.get("mainJob")
+    public Job gdcJob() {
+        return jobBuilderFactory.get("gdcJob")
                 .start(configurePipelineFlow())
                 .next(buildFlow())
                 .end()
                 .build();
     }
-
 }

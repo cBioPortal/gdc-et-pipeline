@@ -57,10 +57,11 @@ public class XmlFileMappingTasklet implements Tasklet {
 
     private Map<String, List<String>> barcodeToSamplesMap = new HashMap<>();
     private Map<String, List<String>> uuidToFilesMap = new HashMap<>();
+    private Map<String, List<String>> dataFormatMap = new HashMap<>();
     private RestTemplate restTemplate = new RestTemplate();
 
 
-    protected void xmlUnmarshall(File xmlFile) throws JAXBException {
+    protected void unmarshall(File xmlFile) throws JAXBException {
 
 
         JAXBContext jaxbContext = JAXBContext.newInstance(TcgaBcr.class);
@@ -80,12 +81,16 @@ public class XmlFileMappingTasklet implements Tasklet {
 
         List<Sample> samples = tcgaBcr.getPatient().getSamples().getSample();
         List<String> samplesList = new ArrayList<>();
-        for (Sample sample : samples) {
-            samplesList.add(barcode + "-" + sample.getSampleTypeId().getValue());
+        if (!samples.isEmpty()) {
+            for (Sample sample : samples) {
+                samplesList.add(barcode + "-" + sample.getSampleTypeId().getValue());
+            }
+
+            barcodeToSamplesMap.put(barcode, samplesList);
+
+        } else {
+            uuidToFilesMap.remove(case_uuid);
         }
-
-        barcodeToSamplesMap.put(barcode, samplesList);
-
     }
 
 
@@ -99,7 +104,7 @@ public class XmlFileMappingTasklet implements Tasklet {
      *                  }
      *          },
      * "format":"JSON",
-     * "fields":"file_name,cases.case_id",
+     * "fields":"file_name,cases.case_id,data_format",
      *
      * }
      */
@@ -133,7 +138,7 @@ public class XmlFileMappingTasklet implements Tasklet {
     //TODO performance check for large input size
     protected GdcApiResponse callGdcApi(String url, String payload) throws Exception {
         if (uuidToFilesMap.isEmpty()) {
-            if (LOG.isDebugEnabled()) {
+            if (LOG.isErrorEnabled()) {
                 LOG.error(" No Case Id's to add to API call");
             }
             throw new Exception();
@@ -172,8 +177,6 @@ public class XmlFileMappingTasklet implements Tasklet {
             "pagination":{...}
         }
     }
-
-
      */
 
     protected GdcApiResponse parseJsonResponse(ResponseEntity<String> response) {
@@ -187,30 +190,34 @@ public class XmlFileMappingTasklet implements Tasklet {
         if (caseList.size() == 1) {
             // The only case_id
             return caseList.get(0).getCase_id();
-        } else {
-            for (Case c : caseList) {
-                if (uuidToFilesMap.containsKey(c.getCase_id())) {
-                    return c.getCase_id();
-                }
+        }
+        for (Case c : caseList) {
+            if (uuidToFilesMap.containsKey(c.getCase_id())) {
+                return c.getCase_id();
             }
-
         }
         return null;
     }
 
     protected void addDataToMap(GdcApiResponse resp) {
         //Map : case_id --> file_name
+        //Response is jumbled . So need to identify case id sent in request.
 
         List<String> maf_files = new ArrayList<>();
         for (Hits hit : resp.getData().getHits()) {
 
+            //maf files are common for all uuid's. skip extracting case id from response
             if (hit.getData_format().equalsIgnoreCase("MAF")) {
+
                 maf_files.add(hit.getFile_name());
             } else {
                 String case_id = getCaseIdFromResponse(hit);
-                uuidToFilesMap.get(case_id).add(hit.getFile_name());
+                if (!case_id.isEmpty()) {
+                    uuidToFilesMap.get(case_id).add(hit.getFile_name());
+                }
             }
         }
+        //add maf files back to the map.
         for (Map.Entry<String, List<String>> entry : uuidToFilesMap.entrySet()) {
             List<String> files = entry.getValue();
             files.addAll(maf_files);
@@ -231,23 +238,21 @@ public class XmlFileMappingTasklet implements Tasklet {
                 LOG.info(" Payload : " + payload);
             }
             GdcApiResponse res = callGdcApi(url, payload);
-            addDataToMap(res);
             totalCallCount = res.getData().getPagination().getPages();
             if (totalCallCount == 0) {
                 if (LOG.isErrorEnabled()) {
                     LOG.error("Last API Request returned 0 results");
-                    throw new Exception(" Last API Request returned 0 results ");
                 }
+                throw new Exception(" Last API Request returned 0 results ");
             }
+            addDataToMap(res);
             from = callCount * MAX_RESPONSE_SIZE + 1;
         }
     }
 
     @Override
     public RepeatStatus execute(StepContribution stepContext, ChunkContext chunkContext) throws Exception {
-
         long startTime = System.currentTimeMillis();
-
         File source = new File(sourceDir);
 
         List<File> xmlFiles = new ArrayList<>();
@@ -258,7 +263,6 @@ public class XmlFileMappingTasklet implements Tasklet {
                 }
             }
         }
-
         LOG.info("Number of Biospecimen Files found = " + xmlFiles.size());
 
         if (xmlFiles.isEmpty()) {
@@ -272,14 +276,13 @@ public class XmlFileMappingTasklet implements Tasklet {
             }
             //JAXB
             try {
-                xmlUnmarshall(biospecimenXML);
+                unmarshall(biospecimenXML);
             } catch (JAXBException e) {
                 if (LOG.isErrorEnabled()) {
                     LOG.error("Unmarshall error");
                     LOG.error(" Skipping File :" + biospecimenXML.getName());
                 }
             }
-            break;
         }
 
         String payload = buildJsonRequest();
@@ -296,9 +299,7 @@ public class XmlFileMappingTasklet implements Tasklet {
                 .getExecutionContext()
                 .put("uuidToFilesMap", uuidToFilesMap);
 
-
         return RepeatStatus.FINISHED;
     }
-
 }
 

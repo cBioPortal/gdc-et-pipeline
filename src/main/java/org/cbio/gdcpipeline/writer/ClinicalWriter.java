@@ -6,6 +6,7 @@ import org.apache.tomcat.util.buf.StringUtils;
 import org.cbio.gdcpipeline.model.cbio.ClinicalDataModel;
 import org.cbio.gdcpipeline.model.cbio.Patient;
 import org.cbio.gdcpipeline.model.cbio.Sample;
+import org.cbio.gdcpipeline.step.ClinicalStep;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.ItemStreamWriter;
@@ -23,50 +24,47 @@ import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Created by Dixit on 02/07/17.
  */
 public class ClinicalWriter implements ItemStreamWriter<ClinicalDataModel> {
-
     @Value("#{jobParameters[outputDirectory]}")
     private String outputDir;
 
     @Value("${clinical.data.patient.file}")
     private String patientFile;
+
     @Value("${clinical.data.sample.file}")
     private String sampleFile;
 
     private ExecutionContext executionContext;
-    private String writerType;
+    private ClinicalStep.CLINICAL_TYPE writerType;
     private FlatFileItemWriter<ClinicalDataModel> clinicalWriter = new FlatFileItemWriter<>();
-
-
     private static Log LOG = LogFactory.getLog(ClinicalWriter.class);
 
-
-    public ClinicalWriter(String writerType) {
+    public ClinicalWriter(ClinicalStep.CLINICAL_TYPE writerType) {
         this.writerType = writerType;
     }
 
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException {
         this.executionContext = executionContext;
-        configureWriter(writerType);
+        configureWriter();
     }
-
 
     @Override
     public void write(List<? extends ClinicalDataModel> list) throws Exception {
         //configure writer
         List<ClinicalDataModel> filterList = new ArrayList<>();
-        if (writerType.equals("patient")) {
+        if (writerType.equals(ClinicalStep.CLINICAL_TYPE.PATIENT)) {
             for (ClinicalDataModel data : list) {
                 if (data instanceof Patient) {
                     filterList.add(data);
                 }
             }
-        } else if (writerType.equals("sample")) {
+        } else if (writerType.equals(ClinicalStep.CLINICAL_TYPE.SAMPLE)) {
             for (ClinicalDataModel data : list) {
                 if (data instanceof Sample) {
                     filterList.add(data);
@@ -76,18 +74,16 @@ public class ClinicalWriter implements ItemStreamWriter<ClinicalDataModel> {
         clinicalWriter.write(filterList);
     }
 
-
-    private void configureWriter(String writerType) {
+    private void configureWriter() {
         ClinicalDataModel data = null;
-        String outputFile = outputDir + File.separator;
-        if (writerType.equals("patient")) {
+        String filename;
+        if (writerType.equals(ClinicalStep.CLINICAL_TYPE.PATIENT)) {
             data = new Patient();
-            outputFile += patientFile;
+            filename = patientFile;
         } else {
             data = new Sample();
-            outputFile += sampleFile;
+            filename = sampleFile;
         }
-
         clinicalWriter.setShouldDeleteIfExists(true);
         clinicalWriter.setLineSeparator(System.lineSeparator());
         clinicalWriter.setHeaderCallback(clinicalDataHeader(data));
@@ -96,10 +92,8 @@ public class ClinicalWriter implements ItemStreamWriter<ClinicalDataModel> {
         FieldExtractor<ClinicalDataModel> fe = createFieldExtractor(data);
         lineAggregator.setFieldExtractor(fe);
         clinicalWriter.setLineAggregator(lineAggregator);
-        clinicalWriter.setResource(new FileSystemResource(new File(outputFile)));
+        clinicalWriter.setResource(new FileSystemResource(new File(outputDir,filename)));
         clinicalWriter.open(this.executionContext);
-
-
     }
 
     private FlatFileHeaderCallback clinicalDataHeader(ClinicalDataModel data) {
@@ -123,30 +117,20 @@ public class ClinicalWriter implements ItemStreamWriter<ClinicalDataModel> {
         };
     }
 
-
     private FieldExtractor<ClinicalDataModel> createFieldExtractor(ClinicalDataModel data) {
         BeanWrapperFieldExtractor<ClinicalDataModel> ext = new BeanWrapperFieldExtractor<>();
         List<String> fieldList = data.getFields();
+        fieldList.stream().map(String::toLowerCase).collect(Collectors.toList());
         String[] fields = new String[fieldList.size()];
-        fields = data.getFields().toArray(fields);
-        for (int i = 0; i < fields.length; i++) {
-            fields[i] = fields[i].toLowerCase();
-        }
-        ext.setNames(fields);
+        ext.setNames(fieldList.toArray(fields));
         return ext;
-
     }
-
 
     @Override
     public void update(ExecutionContext executionContext) throws ItemStreamException {
-
     }
 
     @Override
     public void close() throws ItemStreamException {
-
     }
-
-
 }

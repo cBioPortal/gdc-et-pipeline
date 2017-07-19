@@ -7,22 +7,22 @@ import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.JobParametersBuilder;
-import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.ApplicationContext;
+import org.springframework.context.ConfigurableApplicationContext;
 
 
 @SpringBootApplication
-@EnableBatchProcessing
 public class GDCPipelineApplication {
 
 
 	private static Log LOG = LogFactory.getLog(GDCPipelineApplication.class);
 
-	private final static String MAIN_JOB = "mainJob";
-	private final String DEFAULT_RUN_STEP = "ALL";
+	private final static String GDC_JOB = "gdcJob";
+	private final static String DEFAULT_DATATYPES = "ALL";
+	private final static String DEFAULT_FILTER_SAMPLE = "true";
+
 
 	private static Options getOptions(String []input){
 		Options options = new Options();
@@ -30,7 +30,7 @@ public class GDCPipelineApplication {
 		options.addOption("o","output",true,"output directory for files");
 		options.addOption("study", "study", true, "Cancer Study Id");
 		options.addOption("filter_sample", "filter_sample", true, "True or False. Flag to filter Normal samples. Default is True ");
-		options.addOption("runstep", "runstep", true, "Steps to run. Default is All");
+		options.addOption("datatypes", "datatypes", true, "Datatypes to run. Default is All");
 		options.addOption("h", "help", true, "shows this help document and quits.");
 		return options;
 	}
@@ -44,10 +44,10 @@ public class GDCPipelineApplication {
 		System.exit(exitStatus);
 	}
 
-	private static void launchJob(String[] args, String sourceDirectory, String outputDirectory, String study, String filter_sample, String run_step) throws Exception {
+	private static void launchJob(String[] args, String sourceDirectory, String outputDirectory, String study, String filter_sample, String datatypes) throws Exception {
 		SpringApplication app = new SpringApplication(GDCPipelineApplication.class);
-		ApplicationContext ctx= app.run(args);
-		Job mainJob = ctx.getBean(MAIN_JOB, Job.class);
+		ConfigurableApplicationContext ctx= app.run(args);
+		Job gdcJob = ctx.getBean(GDC_JOB, Job.class);
 		long t = System.currentTimeMillis();
 		//TODO remove time
 		String time = String.valueOf(t);
@@ -58,10 +58,10 @@ public class GDCPipelineApplication {
 				.addString("outputDirectory", outputDirectory)
                 .addString("study", study)
 				.addString("filter_sample", filter_sample)
-				.addString("runstep", run_step)
+				.addString("datatypes", datatypes)
 				.addString("time",time)
 				.toJobParameters();
-		JobExecution jobExecution = jobLauncher.run(mainJob, jobParameters);
+		JobExecution jobExecution = jobLauncher.run(gdcJob, jobParameters);
 		LOG.info("GDC Pipeline Job completed.");
 	}
 
@@ -86,13 +86,13 @@ public class GDCPipelineApplication {
 			GDCPipelineApplication.help(options, 0, "study");
 		}
 
-		String run_step = "ALL";
-		if (cli.hasOption("runstep")) {
-			run_step = cli.getOptionValue("runstep");
+		String datatypes = DEFAULT_DATATYPES;
+		if (cli.hasOption("datatypes")) {
+			datatypes = cli.getOptionValue("datatypes");
 		}
 
 		//TODO create a common validator ?
-		String filter_sample = "true";
+		String filter_sample = DEFAULT_FILTER_SAMPLE;
 		if (cli.hasOption("filter_sample")) {
 			if (cli.getOptionValue("filter_sample").toLowerCase().equals("false")) {
 				filter_sample = "false";
@@ -101,7 +101,7 @@ public class GDCPipelineApplication {
 			}
 		}
 
-		launchJob(args, cli.getOptionValue("source"), cli.getOptionValue("output"), cli.getOptionValue("study"), filter_sample, run_step);
+		launchJob(args, cli.getOptionValue("source"), cli.getOptionValue("output"), cli.getOptionValue("study"), filter_sample, datatypes);
 
 	}
 }

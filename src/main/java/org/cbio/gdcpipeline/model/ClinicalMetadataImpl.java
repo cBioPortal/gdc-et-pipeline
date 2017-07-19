@@ -6,21 +6,17 @@ import java.util.*;
  * Created by Dixit on 02/07/17.
  */
 public class ClinicalMetadataImpl implements MetadataManager {
-
     Map<String, String> displayNames = new HashMap<>();
     Map<String, String> description = new HashMap<>();
     Map<String, String> datatype = new HashMap<>();
     Map<String, String> priority = new HashMap<>();
 
     public ClinicalMetadataImpl() {
-
         setDisplayNames();
         setDescription();
         setDatatype();
         setPriority();
-
     }
-
 
     @Override
     public Map<String, List<String>> getFullHeader(List<String> header) {
@@ -37,14 +33,11 @@ public class ClinicalMetadataImpl implements MetadataManager {
             datatype.add(this.datatype.get(key));
             priority.add(this.priority.get(key));
         }
-
-
         headers.put("displayNames", displayNames);
         headers.put("description", description);
         headers.put("datatype", datatype);
         headers.put("priority", priority);
         headers.put("headers", header);
-
         return headers;
     }
 
@@ -73,7 +66,6 @@ public class ClinicalMetadataImpl implements MetadataManager {
         this.datatype.put("OS_STATUS", "STRING");
         this.datatype.put("SEX", "STRING");
         this.datatype.put("AGE", "NUMBER");
-
     }
 
     private void setPriority() {
@@ -83,7 +75,5 @@ public class ClinicalMetadataImpl implements MetadataManager {
         this.priority.put("OS_STATUS", "1");
         this.priority.put("SEX", "1");
         this.priority.put("AGE", "1");
-
     }
-
 }
