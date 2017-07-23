@@ -34,32 +34,14 @@ public class SetUpPipelineTasklet implements Tasklet {
 
     @Override
     public RepeatStatus execute(StepContribution stepContribution, ChunkContext chunkContext) throws Exception {
-
-
         initiateCancerStudy();
         validateCancerStudy();
         createOutputDirectory();
         validateSourceDirectory();
-        List<File> filesToExtract = getCompressedFiles();
-        if (!filesToExtract.isEmpty()) {
-            if (LOG.isInfoEnabled()) {
-                LOG.info("Extracting compressed files in source directory. Total = " + filesToExtract.size());
-            }
-            extractFiles(filesToExtract);
-        }
-
-
         if (LOG.isInfoEnabled()) {
             LOG.info(" ######### Pipeline Setup Completed #########");
         }
         return RepeatStatus.FINISHED;
-
-
-    }
-
-    private void extractFiles(List<File> filesToExtract) {
-        //TODO
-
     }
 
     private List<File> getCompressedFiles() {
@@ -77,21 +59,16 @@ public class SetUpPipelineTasklet implements Tasklet {
     }
 
     private void initiateCancerStudy() {
-
         supportedCancerStudy.add("TCGA_BRCA");
     }
 
     private void validateCancerStudy() throws Exception {
-        //TODO temp
-
         if (!supportedCancerStudy.contains(cancer_study_id)) {
             if (LOG.isErrorEnabled()) {
                 LOG.error(" Invalid Cancer Study Type ");
             }
             throw new Exception();
         }
-
-
     }
 
     private void validateSourceDirectory() throws FileNotFoundException {
@@ -105,12 +82,10 @@ public class SetUpPipelineTasklet implements Tasklet {
     }
 
     private void createOutputDirectory() throws FileNotFoundException {
-
         File outputDirectory = new File(outputDir);
         if (outputDirectory.mkdir()) {
             if (LOG.isInfoEnabled()) {
                 LOG.info(" Output will be at " + outputDir);
-
             }
         } else if (!outputDirectory.exists()) {
             if (LOG.isErrorEnabled()) {
@@ -120,9 +95,7 @@ public class SetUpPipelineTasklet implements Tasklet {
         } else {
             if (LOG.isInfoEnabled()) {
                 LOG.info(" Output directory is valid ");
-
             }
         }
-
     }
 }

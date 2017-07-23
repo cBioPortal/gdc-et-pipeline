@@ -23,7 +23,6 @@ import java.util.Map;
  * Created by Dixit on 16/06/17.
  */
 public class ClinicalReader implements ItemStreamReader<ClinicalDataModel> {
-
     private static Log LOG = LogFactory.getLog(ClinicalReader.class);
 
     @Value("#{jobExecutionContext[barcodeToSamplesMap]}")

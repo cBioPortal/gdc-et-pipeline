@@ -14,7 +14,6 @@ import java.io.File;
  * Created by Dixit
  */
 public class ClinicalFileTypeDecider implements JobExecutionDecider {
-
     @Value("#{jobParameters[sourceDirectory]}")
     private String sourceDir;
     @Value("#{jobParameters[study]}")
@@ -24,9 +23,7 @@ public class ClinicalFileTypeDecider implements JobExecutionDecider {
 
     @Override
     public FlowExecutionStatus decide(JobExecution jobExecution, StepExecution stepExecution) {
-
         File clinical = new File(sourceDir);
-
         for (String name : clinical.list()) {
             if (name.contains("biospecimen")) {
                 if (name.endsWith(".xml")) {

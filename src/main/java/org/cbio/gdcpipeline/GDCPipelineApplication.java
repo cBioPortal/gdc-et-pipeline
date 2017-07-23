@@ -12,6 +12,9 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 
+import java.util.ArrayList;
+import java.util.List;
+
 
 @SpringBootApplication
 public class GDCPipelineApplication {
@@ -26,9 +29,9 @@ public class GDCPipelineApplication {
 
 	private static Options getOptions(String []input){
 		Options options = new Options();
-        options.addOption("s","source",true,"source directory for files");
-		options.addOption("o","output",true,"output directory for files");
-		options.addOption("study", "study", true, "Cancer Study Id");
+        options.addRequiredOption("s","source",true,"source directory for files");
+		options.addRequiredOption("o","output",true,"output directory for files");
+		options.addRequiredOption("study", "study", true, "Cancer Study Id");
 		options.addOption("filter_sample", "filter_sample", true, "True or False. Flag to filter Normal samples. Default is True ");
 		options.addOption("datatypes", "datatypes", true, "Datatypes to run. Default is All");
 		options.addOption("h", "help", true, "shows this help document and quits.");
@@ -48,10 +51,6 @@ public class GDCPipelineApplication {
 		SpringApplication app = new SpringApplication(GDCPipelineApplication.class);
 		ConfigurableApplicationContext ctx= app.run(args);
 		Job gdcJob = ctx.getBean(GDC_JOB, Job.class);
-		long t = System.currentTimeMillis();
-		//TODO remove time
-		String time = String.valueOf(t);
-
 		JobLauncher jobLauncher = ctx.getBean(JobLauncher.class);
 		JobParameters jobParameters = new JobParametersBuilder()
 				.addString("sourceDirectory", sourceDirectory)
@@ -59,38 +58,23 @@ public class GDCPipelineApplication {
                 .addString("study", study)
 				.addString("filter_sample", filter_sample)
 				.addString("datatypes", datatypes)
-				.addString("time",time)
 				.toJobParameters();
 		JobExecution jobExecution = jobLauncher.run(gdcJob, jobParameters);
 		LOG.info("GDC Pipeline Job completed.");
 	}
 
 	public static void main(String[] args) throws Exception {
-
 		Options options = GDCPipelineApplication.getOptions(args);
 		CommandLineParser parser = new DefaultParser();
-
 		CommandLine cli = parser.parse(options,args);
-
+		List<String> errors = new ArrayList<>();
 		if(cli.hasOption("h") || cli.hasOption("help")){
 			GDCPipelineApplication.help(options, 0, "");
 		}
-
-		if (!cli.hasOption("source")) {
-			GDCPipelineApplication.help(options, 0, "source");
-		}
-		if (!cli.hasOption("output")) {
-			GDCPipelineApplication.help(options, 0, "output");
-		}
-		if (!cli.hasOption("study")) {
-			GDCPipelineApplication.help(options, 0, "study");
-		}
-
 		String datatypes = DEFAULT_DATATYPES;
 		if (cli.hasOption("datatypes")) {
 			datatypes = cli.getOptionValue("datatypes");
 		}
-
 		//TODO create a common validator ?
 		String filter_sample = DEFAULT_FILTER_SAMPLE;
 		if (cli.hasOption("filter_sample")) {
@@ -100,8 +84,6 @@ public class GDCPipelineApplication {
 				GDCPipelineApplication.help(options, 0, "Filter Option must either be True or False");
 			}
 		}
-
 		launchJob(args, cli.getOptionValue("source"), cli.getOptionValue("output"), cli.getOptionValue("study"), filter_sample, datatypes);
-
 	}
 }

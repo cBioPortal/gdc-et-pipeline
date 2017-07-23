@@ -40,7 +40,6 @@ import java.util.Map;
  */
 
 public class XmlFileMappingTasklet implements Tasklet {
-
     private static Log LOG = LogFactory.getLog(XmlFileMappingTasklet.class);
 
     @Value("#{jobParameters[sourceDirectory]}")
@@ -60,10 +59,7 @@ public class XmlFileMappingTasklet implements Tasklet {
     private Map<String, List<String>> dataFormatMap = new HashMap<>();
     private RestTemplate restTemplate = new RestTemplate();
 
-
     protected void unmarshall(File xmlFile) throws JAXBException {
-
-
         JAXBContext jaxbContext = JAXBContext.newInstance(TcgaBcr.class);
         Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
 
@@ -85,9 +81,7 @@ public class XmlFileMappingTasklet implements Tasklet {
             for (Sample sample : samples) {
                 samplesList.add(barcode + "-" + sample.getSampleTypeId().getValue());
             }
-
             barcodeToSamplesMap.put(barcode, samplesList);
-
         } else {
             uuidToFilesMap.remove(case_uuid);
         }
@@ -111,7 +105,6 @@ public class XmlFileMappingTasklet implements Tasklet {
 
     //TODO add to props
     protected String buildJsonRequest() {
-
         JsonObject node = new JsonObject();
         JsonObject filters = new JsonObject();
         JsonObject content = new JsonObject();
@@ -130,9 +123,7 @@ public class XmlFileMappingTasklet implements Tasklet {
         node.add("filters", filters);
         node.addProperty("format", "JSON");
         node.addProperty("fields", "file_name,cases.case_id,data_format");
-
         return node.toString();
-
     }
 
     //TODO performance check for large input size
@@ -157,12 +148,8 @@ public class XmlFileMappingTasklet implements Tasklet {
             throw new Exception();
 
         }
-
         GdcApiResponse result = parseJsonResponse(response);
-
-
         return result;
-
     }
 
     /* Response Format
@@ -225,7 +212,6 @@ public class XmlFileMappingTasklet implements Tasklet {
     }
 
     protected void gdcApiRequest(String payload) throws Exception {
-
         int callCount = 0;
         int totalCallCount = 1;
         int from = 1;
@@ -284,7 +270,6 @@ public class XmlFileMappingTasklet implements Tasklet {
                 }
             }
         }
-
         String payload = buildJsonRequest();
 
         gdcApiRequest(payload);

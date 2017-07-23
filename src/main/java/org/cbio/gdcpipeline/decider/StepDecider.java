@@ -16,10 +16,8 @@ public class StepDecider implements JobExecutionDecider {
         ALL, CLINICAL, MUTATION
     }
 
-
     @Override
     public FlowExecutionStatus decide(JobExecution jobExecution, StepExecution stepExecution) {
-
         String stepToRun = jobExecution.getJobParameters().getString("datatypes");
         List<String> steps = Arrays.asList(stepToRun, ",");
 
@@ -29,9 +27,6 @@ public class StepDecider implements JobExecutionDecider {
         if (stepToRun.contains(STEP.MUTATION.toString())) {
             return new FlowExecutionStatus(STEP.MUTATION.toString());
         }
-
         return new FlowExecutionStatus(STEP.ALL.toString());
-
-
     }
 }

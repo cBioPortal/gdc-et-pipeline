@@ -43,7 +43,6 @@ public class ClinicalMetaDataTasklet implements Tasklet {
 
     @Override
     public RepeatStatus execute(StepContribution stepContribution, ChunkContext chunkContext) throws Exception {
-
         String sampleFile = outputDir + File.separator + METADATA_SAMPLE_FILE_NAME;
         String patientFile = outputDir + File.separator + METADATA_PATIENT_FILE_NAME;
 
@@ -62,8 +61,6 @@ public class ClinicalMetaDataTasklet implements Tasklet {
 
         MetaFileWriter.writeMetadata(patient, patientFile);
         MetaFileWriter.writeMetadata(sample, sampleFile);
-
         return RepeatStatus.FINISHED;
-
     }
 }

@@ -8,7 +8,6 @@ import java.util.Map;
  * Created by Dixit on 13/07/17.
  */
 public class ClinicalDataSourceImpl implements ClinicalDataSource {
-
     public enum OS_STATUS {LIVING, DECEASED}
     private Map<String, String> clinicalFieldMap = initClinicalFieldValues();
 

@@ -3,7 +3,6 @@ package org.cbio.gdcpipeline.step;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.cbio.gdcpipeline.model.cbio.ClinicalDataModel;
-import org.cbio.gdcpipeline.processor.ClinicalProcessor;
 import org.cbio.gdcpipeline.reader.ClinicalReader;
 import org.cbio.gdcpipeline.tasklet.ClinicalMetaDataTasklet;
 import org.cbio.gdcpipeline.writer.ClinicalWriter;
@@ -49,12 +48,6 @@ public class ClinicalStep {
     }
 
     @Bean
-    @StepScope
-    public ClinicalProcessor clinicalDataProcessor() {
-        return new ClinicalProcessor();
-    }
-
-    @Bean
     public CompositeItemWriter<ClinicalDataModel> compositeItemWriter() {
         List<ItemWriter<? super ClinicalDataModel>> delegates = new ArrayList<>(2);
 
@@ -88,7 +81,6 @@ public class ClinicalStep {
         return stepBuilderFactory.get("clinicalDataStep")
                 .<ClinicalDataModel, ClinicalDataModel>chunk(chunkInterval)
                 .reader(clinicalReader())
-                .processor(clinicalDataProcessor())
                 .writer(compositeItemWriter())
                 .build();
     }
