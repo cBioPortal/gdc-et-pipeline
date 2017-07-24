@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Created by Dixit on 08/07/17.
+ * @author Dixit Patel
  */
 public class MetaFileWriter {
     private static String metadata;

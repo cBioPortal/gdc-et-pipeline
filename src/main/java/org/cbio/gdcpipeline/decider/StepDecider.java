@@ -5,11 +5,8 @@ import org.springframework.batch.core.StepExecution;
 import org.springframework.batch.core.job.flow.FlowExecutionStatus;
 import org.springframework.batch.core.job.flow.JobExecutionDecider;
 
-import java.util.Arrays;
-import java.util.List;
-
 /**
- * Created by Dixit on 13/07/17.
+ * @author Dixit Patel
  */
 public class StepDecider implements JobExecutionDecider {
     public enum STEP {
@@ -19,13 +16,11 @@ public class StepDecider implements JobExecutionDecider {
     @Override
     public FlowExecutionStatus decide(JobExecution jobExecution, StepExecution stepExecution) {
         String stepToRun = jobExecution.getJobParameters().getString("datatypes");
-        List<String> steps = Arrays.asList(stepToRun, ",");
-
         if (stepToRun.contains(STEP.CLINICAL.toString())) {
             return new FlowExecutionStatus(STEP.CLINICAL.toString());
         }
         if (stepToRun.contains(STEP.MUTATION.toString())) {
-            return new FlowExecutionStatus(STEP.MUTATION.toString());
+            return new FlowExecutionStatus("MUTATION");
         }
         return new FlowExecutionStatus(STEP.ALL.toString());
     }

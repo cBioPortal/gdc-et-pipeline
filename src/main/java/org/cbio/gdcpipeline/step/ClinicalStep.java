@@ -5,6 +5,7 @@ import org.apache.commons.logging.LogFactory;
 import org.cbio.gdcpipeline.model.cbio.ClinicalDataModel;
 import org.cbio.gdcpipeline.reader.ClinicalReader;
 import org.cbio.gdcpipeline.tasklet.ClinicalMetaDataTasklet;
+import org.cbio.gdcpipeline.util.CommonDataUtil;
 import org.cbio.gdcpipeline.writer.ClinicalWriter;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
@@ -23,7 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Created by Dixit on 16/06/17.
+ * @author Dixit Patel
  */
 @EnableBatchProcessing
 @Configuration
@@ -36,8 +37,6 @@ public class ClinicalStep {
 
     private static Log LOG = LogFactory.getLog(ClinicalStep.class);
 
-    public enum CLINICAL_TYPE{PATIENT,SAMPLE}
-
     @Value("${chunk.interval}")
     private int chunkInterval;
 
@@ -47,13 +46,10 @@ public class ClinicalStep {
         return new ClinicalReader();
     }
 
-    @Bean
     public CompositeItemWriter<ClinicalDataModel> compositeItemWriter() {
         List<ItemWriter<? super ClinicalDataModel>> delegates = new ArrayList<>(2);
-
         delegates.add(clinicalPatientDataWriter());
         delegates.add(clinicalSampleDataWriter());
-
         CompositeItemWriter<ClinicalDataModel> compositeItemWriter = new CompositeItemWriter<>();
         compositeItemWriter.setDelegates(delegates);
         try {
@@ -67,13 +63,13 @@ public class ClinicalStep {
     @Bean
     @StepScope
     public ClinicalWriter clinicalPatientDataWriter() {
-        return new ClinicalWriter(CLINICAL_TYPE.PATIENT);
+        return new ClinicalWriter(CommonDataUtil.CLINICAL_TYPE.PATIENT);
     }
 
     @Bean
     @StepScope
     public ClinicalWriter clinicalSampleDataWriter() {
-        return new ClinicalWriter(CLINICAL_TYPE.SAMPLE);
+        return new ClinicalWriter(CommonDataUtil.CLINICAL_TYPE.SAMPLE);
     }
 
     @Bean
