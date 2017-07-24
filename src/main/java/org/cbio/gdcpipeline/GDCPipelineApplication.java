@@ -31,7 +31,7 @@ public class GDCPipelineApplication {
 		options.addRequiredOption("m","manifest_file",true,"Manifest file path");
         options.addOption("f", "filter_normal_sample", true, "True or False. Flag to filter normal samples. Default is True ");
 		options.addOption("d", "datatypes", true, "Datatypes to run. Default is All");
-        options.addOption("s", "separate_maf", true, "True or False. Process and generate MAF files individually apart from merging. Default is False");
+        options.addOption("separate_maf", "separate_maf", true, "True or False. Process and generate MAF files individually apart from merging. Default is False");
         options.addOption("h", "help", true, "shows this help document and quits.");
 		return options;
 	}

@@ -36,8 +36,7 @@ public class CommonDataUtil {
         return false;
     }
 
-    public enum CLINICAL_TYPE {PATIENT, SAMPLE}
-
+    public enum CLINICAL_TYPE{PATIENT,SAMPLE}
     public enum CLINICAL_OS_STATUS {LIVING, DECEASED}
 
     public enum GDC_DATAFORMAT {
@@ -45,30 +44,29 @@ public class CommonDataUtil {
         MAF("MAF");
 
         private final String format;
-
-        GDC_DATAFORMAT(String format) {
-            this.format = format;
+        private GDC_DATAFORMAT(String format){
+            this.format=format;
         }
 
         @Override
-        public String toString() {
+        public String toString(){
             return this.format;
         }
     }
 
-    public enum GDC_TYPE {
+    public enum GDC_TYPE{
         BIOSPECIMEN("biospecimen_supplement"),
         CLINICAL("clinical_supplement"),
         MUTATION("masked_somatic_mutation"),;
 
         private final String type;
 
-        GDC_TYPE(String type) {
-            this.type = type;
+        private GDC_TYPE(String type){
+            this.type=type;
         }
 
         @Override
-        public String toString() {
+        public String toString(){
             return this.type;
         }
     }
