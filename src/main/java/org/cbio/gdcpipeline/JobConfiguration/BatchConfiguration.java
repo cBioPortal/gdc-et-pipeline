@@ -37,6 +37,12 @@ public class BatchConfiguration {
     @Resource(name = "clinicalMetaDataStep")
     Step clinicalMetaDataStep;
 
+    @Resource(name = "mutationDataStep")
+    Step mutationDataStep;
+
+    @Resource(name = "mutationMetaDataStep")
+    Step mutationMetaDataStep;
+
     @Value("${chunk.interval}")
     private int chunkInterval;
 
@@ -102,7 +108,16 @@ public class BatchConfiguration {
                 .build();
     }
 
-    @JobScope
+    @Bean
+    public Flow mutationDataFlow() {
+        return new FlowBuilder<Flow>("mutationDataFlow")
+                .start(mutationDataStep)
+                .from(mutationDataStep).on("CONTINUE").to(mutationDataStep)
+                .next(mutationMetaDataStep)
+                .build();
+    }
+
+    @Bean
     public JobExecutionDecider stepDecider() {
         return new StepDecider();
     }
@@ -111,6 +126,7 @@ public class BatchConfiguration {
     public Flow gdcPipelineFlow() {
         return new FlowBuilder<Flow>("gdcPipelineFlow")
                 .start(clinicalDataFlow())
+                .next(mutationDataFlow())
                 .build();
     }
 

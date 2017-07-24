@@ -19,8 +19,6 @@ public class StepDecider implements JobExecutionDecider {
     @Override
     public FlowExecutionStatus decide(JobExecution jobExecution, StepExecution stepExecution) {
         String stepToRun = jobExecution.getJobParameters().getString("datatypes");
-        List<String> steps = Arrays.asList(stepToRun, ",");
-
         if (stepToRun.contains(STEP.CLINICAL.toString())) {
             return new FlowExecutionStatus(STEP.CLINICAL.toString());
         }
