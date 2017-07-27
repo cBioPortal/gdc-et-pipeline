@@ -9,23 +9,18 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Created by Dixit on 13/07/17.
+ * @author Dixit Patel
  */
 public class StepDecider implements JobExecutionDecider {
     public enum STEP {
-        ALL, CLINICAL, MUTATION
+        ALL, CLINICAL
     }
 
     @Override
     public FlowExecutionStatus decide(JobExecution jobExecution, StepExecution stepExecution) {
         String stepToRun = jobExecution.getJobParameters().getString("datatypes");
-        List<String> steps = Arrays.asList(stepToRun, ",");
-
         if (stepToRun.contains(STEP.CLINICAL.toString())) {
             return new FlowExecutionStatus(STEP.CLINICAL.toString());
-        }
-        if (stepToRun.contains(STEP.MUTATION.toString())) {
-            return new FlowExecutionStatus(STEP.MUTATION.toString());
         }
         return new FlowExecutionStatus(STEP.ALL.toString());
     }

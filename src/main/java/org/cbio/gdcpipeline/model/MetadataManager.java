@@ -4,10 +4,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Created by Dixit on 01/07/17.
+ * @author Dixit Patel
  */
 public interface MetadataManager {
-
     Map<String, List<String>> getFullHeader(List<String> header);
-
 }

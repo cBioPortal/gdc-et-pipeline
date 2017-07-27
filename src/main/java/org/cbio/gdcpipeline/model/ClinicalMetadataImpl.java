@@ -3,13 +3,13 @@ package org.cbio.gdcpipeline.model;
 import java.util.*;
 
 /**
- * Created by Dixit on 02/07/17.
+ * @author Dixit Patel
  */
 public class ClinicalMetadataImpl implements MetadataManager {
-    Map<String, String> displayNames = new HashMap<>();
-    Map<String, String> description = new HashMap<>();
-    Map<String, String> datatype = new HashMap<>();
-    Map<String, String> priority = new HashMap<>();
+    private Map<String, String> displayNames = new HashMap<>();
+    private Map<String, String> description = new HashMap<>();
+    private Map<String, String> datatype = new HashMap<>();
+    private Map<String, String> priority = new HashMap<>();
 
     public ClinicalMetadataImpl() {
         setDisplayNames();

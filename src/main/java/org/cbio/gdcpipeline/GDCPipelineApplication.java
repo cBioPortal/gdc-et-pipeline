@@ -15,24 +15,23 @@ import org.springframework.context.ConfigurableApplicationContext;
 import java.util.ArrayList;
 import java.util.List;
 
-
+/**
+ * @author Dixit Patel
+ */
 @SpringBootApplication
 public class GDCPipelineApplication {
-
-
 	private static Log LOG = LogFactory.getLog(GDCPipelineApplication.class);
-
 	private final static String GDC_JOB = "gdcJob";
 	private final static String DEFAULT_DATATYPES = "ALL";
 	private final static String DEFAULT_FILTER_SAMPLE = "true";
 
-
-	private static Options getOptions(String []input){
+    private static Options getOptions(String []input){
 		Options options = new Options();
         options.addRequiredOption("s","source",true,"source directory for files");
 		options.addRequiredOption("o","output",true,"output directory for files");
-		options.addRequiredOption("study", "study", true, "Cancer Study Id");
-		options.addOption("filter_sample", "filter_sample", true, "True or False. Flag to filter Normal samples. Default is True ");
+		options.addRequiredOption("cancer_study_id", "cancer_study_id", true, "Cancer Study Id");
+		options.addRequiredOption("manifest_file","manifest_file",true,"Manifest file path");
+        options.addOption("filter_sample", "filter_sample", true, "True or False. Flag to filter Normal samples. Default is True ");
 		options.addOption("datatypes", "datatypes", true, "Datatypes to run. Default is All");
 		options.addOption("h", "help", true, "shows this help document and quits.");
 		return options;
@@ -47,7 +46,7 @@ public class GDCPipelineApplication {
 		System.exit(exitStatus);
 	}
 
-	private static void launchJob(String[] args, String sourceDirectory, String outputDirectory, String study, String filter_sample, String datatypes) throws Exception {
+	private static void launchJob(String[] args, String sourceDirectory, String outputDirectory, String cancer_study_id, String manifest_file, String filter_sample, String datatypes) throws Exception {
 		SpringApplication app = new SpringApplication(GDCPipelineApplication.class);
 		ConfigurableApplicationContext ctx= app.run(args);
 		Job gdcJob = ctx.getBean(GDC_JOB, Job.class);
@@ -55,19 +54,18 @@ public class GDCPipelineApplication {
 		JobParameters jobParameters = new JobParametersBuilder()
 				.addString("sourceDirectory", sourceDirectory)
 				.addString("outputDirectory", outputDirectory)
-                .addString("study", study)
+                .addString("cancer_study_id", cancer_study_id)
+                .addString("manifest_file",manifest_file)
 				.addString("filter_sample", filter_sample)
 				.addString("datatypes", datatypes)
 				.toJobParameters();
 		JobExecution jobExecution = jobLauncher.run(gdcJob, jobParameters);
-		LOG.info("GDC Pipeline Job completed.");
 	}
 
 	public static void main(String[] args) throws Exception {
 		Options options = GDCPipelineApplication.getOptions(args);
 		CommandLineParser parser = new DefaultParser();
 		CommandLine cli = parser.parse(options,args);
-		List<String> errors = new ArrayList<>();
 		if(cli.hasOption("h") || cli.hasOption("help")){
 			GDCPipelineApplication.help(options, 0, "");
 		}
@@ -75,7 +73,6 @@ public class GDCPipelineApplication {
 		if (cli.hasOption("datatypes")) {
 			datatypes = cli.getOptionValue("datatypes");
 		}
-		//TODO create a common validator ?
 		String filter_sample = DEFAULT_FILTER_SAMPLE;
 		if (cli.hasOption("filter_sample")) {
 			if (cli.getOptionValue("filter_sample").toLowerCase().equals("false")) {
@@ -84,6 +81,6 @@ public class GDCPipelineApplication {
 				GDCPipelineApplication.help(options, 0, "Filter Option must either be True or False");
 			}
 		}
-		launchJob(args, cli.getOptionValue("source"), cli.getOptionValue("output"), cli.getOptionValue("study"), filter_sample, datatypes);
+		launchJob(args, cli.getOptionValue("source"), cli.getOptionValue("output"), cli.getOptionValue("cancer_study_id"), cli.getOptionValue("manifest_file"), filter_sample, datatypes);
 	}
 }

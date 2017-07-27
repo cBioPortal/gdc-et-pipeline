@@ -7,10 +7,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Created by Dixit on 24/06/17.
+ * @author Dixit Patel
  */
-public class Sample extends ClinicalDataModel {
 
+public class Sample extends ClinicalDataModel {
     private String patient_id;
     private String sample_id;
     private String oncotree_code;
@@ -48,7 +48,6 @@ public class Sample extends ClinicalDataModel {
         this.patient_id = patient_id;
     }
 
-
     public String getSample_id() {
         return sample_id;
     }
@@ -64,5 +63,4 @@ public class Sample extends ClinicalDataModel {
     public void setOncotree_code(String oncotree_code) {
         this.oncotree_code = oncotree_code;
     }
-
 }

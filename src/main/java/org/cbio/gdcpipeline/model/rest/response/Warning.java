@@ -1,7 +1,7 @@
 package org.cbio.gdcpipeline.model.rest.response;
 
 /**
- * Created by Dixit on 21/06/17.
+ * @author Dixit Patel
  */
 public class Warning {
     private String warnings;

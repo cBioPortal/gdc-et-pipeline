@@ -1,14 +1,15 @@
 package org.cbio.gdcpipeline.model;
 
+import org.cbio.gdcpipeline.util.CommonDataUtil;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Created by Dixit on 13/07/17.
+ * @author Dixit Patel
  */
 public class ClinicalDataSourceImpl implements ClinicalDataSource {
-    public enum OS_STATUS {LIVING, DECEASED}
     private Map<String, String> clinicalFieldMap = initClinicalFieldValues();
 
     public ClinicalDataSourceImpl() {
@@ -16,8 +17,8 @@ public class ClinicalDataSourceImpl implements ClinicalDataSource {
 
     private Map<String,String> initClinicalFieldValues() {
         Map<String, String> map = new HashMap<>();
-        map.put("alive", OS_STATUS.LIVING.toString());
-        map.put("dead", OS_STATUS.DECEASED.toString());
+        map.put("alive", CommonDataUtil.CLINICAL_OS_STATUS.LIVING.toString());
+        map.put("dead", CommonDataUtil.CLINICAL_OS_STATUS.DECEASED.toString());
         return map;
     }
 

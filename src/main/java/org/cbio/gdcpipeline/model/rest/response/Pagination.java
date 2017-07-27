@@ -1,10 +1,9 @@
 package org.cbio.gdcpipeline.model.rest.response;
 
 /**
- * Created by Dixit on 21/06/17.
+ * @author Dixit Patel
  */
 public class Pagination {
-
     private int count;
     private String sort;
     private int from;

@@ -6,6 +6,8 @@ import org.cbio.gdcpipeline.model.cbio.ClinicalDataModel;
 import org.cbio.gdcpipeline.model.cbio.Patient;
 import org.cbio.gdcpipeline.model.cbio.Sample;
 import org.cbio.gdcpipeline.model.gdc.nci.tcga.bcr.xml.clinical.brca._2.TcgaBcr;
+import org.cbio.gdcpipeline.model.rest.response.GdcFileMetadata;
+import org.cbio.gdcpipeline.util.CommonDataUtil;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.ItemStreamReader;
@@ -20,7 +22,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Created by Dixit on 16/06/17.
+ * @author Dixit Patel
  */
 public class ClinicalReader implements ItemStreamReader<ClinicalDataModel> {
     private static Log LOG = LogFactory.getLog(ClinicalReader.class);
@@ -28,8 +30,8 @@ public class ClinicalReader implements ItemStreamReader<ClinicalDataModel> {
     @Value("#{jobExecutionContext[barcodeToSamplesMap]}")
     private Map<String, List<String>> barcodeToSamplesMap;
 
-    @Value("#{jobExecutionContext[uuidToFilesMap]}")
-    private Map<String, List<String>> uuidToFilesMap;
+    @Value("#{jobExecutionContext[gdcFileMetadatas]}")
+    private List<GdcFileMetadata> gdcFileMetadatas;
 
     @Value("#{jobParameters[filter_sample]}")
     private String filter_sample_flag;
@@ -37,7 +39,7 @@ public class ClinicalReader implements ItemStreamReader<ClinicalDataModel> {
     @Value("#{jobParameters[sourceDirectory]}")
     private String sourceDir;
 
-    @Value("#{jobParameters[study]}")
+    @Value("#{jobParameters[cancer_study_id]}")
     private String cancer_study_id;
 
     @Value("${onco.code.tcga.brca}")
@@ -56,29 +58,34 @@ public class ClinicalReader implements ItemStreamReader<ClinicalDataModel> {
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException {
         List<File> clinicalFileNames = getClinicalFileList();
-
-        if (clinicalFileNames.isEmpty()) {
-            throw new ItemStreamException("Empty Clinical Files list");
-        }
-        for (File clinicalFile : clinicalFileNames) {
-            try {
-                TcgaBcr tcgaBcr = unmarshall(clinicalFile);
-                addData(tcgaBcr);
-            } catch (JAXBException e) {
-                if (LOG.isErrorEnabled()) {
-                    LOG.error("Unmarshalling error. Skipping file " + clinicalFile.getName());
+        if (!clinicalFileNames.isEmpty()) {
+            for (File clinicalFile : clinicalFileNames) {
+                if (LOG.isInfoEnabled()) {
+                    LOG.info("Processing Clinical file : " + clinicalFile.getName());
                 }
-                continue;
-            }
-            if (filter_sample_flag.equalsIgnoreCase("true")) {
-                for (int m = 0; m < this.clinicalDataModelList.size(); m++) {
-                    ClinicalDataModel c = this.clinicalDataModelList.get(m);
-                    if (c instanceof Sample) {
-                        if (((Sample) c).getSample_id().endsWith("-10")) {
-                            clinicalDataModelList.remove(m);
+                try {
+                    TcgaBcr tcgaBcr = unmarshall(clinicalFile);
+                    addData(tcgaBcr);
+                } catch (JAXBException e) {
+                    if (LOG.isErrorEnabled()) {
+                        LOG.error("Unmarshalling error. Skipping file " + clinicalFile.getName());
+                    }
+                    continue;
+                }
+                if (filter_sample_flag.equalsIgnoreCase("true")) {
+                    for (int m = 0; m < this.clinicalDataModelList.size(); m++) {
+                        ClinicalDataModel c = this.clinicalDataModelList.get(m);
+                        if (c instanceof Sample) {
+                            if (((Sample) c).getSample_id().endsWith(CommonDataUtil.NORMAL_SAMPLE_SUFFIX)) {
+                                clinicalDataModelList.remove(m);
+                            }
                         }
                     }
                 }
+            }
+        } else {
+            if (LOG.isInfoEnabled()) {
+                LOG.info(" No Clinincal Files Found");
             }
         }
     }
@@ -95,8 +102,7 @@ public class ClinicalReader implements ItemStreamReader<ClinicalDataModel> {
         String barcode = tcgaBcr.getPatient().getBcrPatientBarcode().getValue();
         if (!barcodeToSamplesMap.containsKey(barcode)) {
             if (LOG.isErrorEnabled()) {
-                LOG.error("Biospecimen file for Barcode : " + barcode + " does not exist");
-                LOG.error("Skipping File");
+                LOG.error("Biospecimen file for Barcode : " + barcode + " does not exist. Skipping File");
             }
         } else {
             List<String> sampleList = barcodeToSamplesMap.get(barcode);
@@ -109,7 +115,6 @@ public class ClinicalReader implements ItemStreamReader<ClinicalDataModel> {
             this.clinicalDataModelList.add(patient);
 
             //sample
-
             for (String sample_id : sampleList) {
                 this.clinicalDataModelList.add(new Sample(
                         tcgaBcr.getPatient().getBcrPatientBarcode().getValue(),
@@ -121,20 +126,26 @@ public class ClinicalReader implements ItemStreamReader<ClinicalDataModel> {
     }
 
     private List<File> getClinicalFileList() throws ItemStreamException {
-        if (uuidToFilesMap.isEmpty()) {
-            if (LOG.isErrorEnabled()) {
-                LOG.error(" UUID to Files Map is Empty.");
-            }
-            throw new ItemStreamException("Empty File Map");
-        }
-        File source = new File(sourceDir);
-        List<File> fileNames = new ArrayList<>();
-        for (File file : source.listFiles()) {
-            if (file.getName().endsWith(".xml") && file.getName().contains("clinical")) {
-                fileNames.add(file);
+        List<File> clincalFiles = new ArrayList<>();
+        List<String> filenames = new ArrayList<>();
+        if(!gdcFileMetadatas.isEmpty()){
+            for (GdcFileMetadata data : gdcFileMetadatas) {
+                if (data.getType().equals(CommonDataUtil.GDC_TYPE.CLINICAL.toString())) {
+                    filenames.add(data.getFile_name());
+                }
             }
         }
-        return fileNames;
+        for (String f : filenames) {
+            File file = new File(sourceDir, f);
+            if (file.exists()) {
+                clincalFiles.add(file);
+            } else {
+                if (LOG.isInfoEnabled()) {
+                    LOG.info("Clinical File : " + file.getAbsolutePath() + " not found.\nSkipping File");
+                }
+            }
+        }
+        return clincalFiles;
     }
 
     @Override
