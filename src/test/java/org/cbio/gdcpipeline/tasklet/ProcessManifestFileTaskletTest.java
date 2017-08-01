@@ -1,7 +1,7 @@
 package org.cbio.gdcpipeline.tasklet;
 
-import com.google.gson.Gson;
 import org.apache.commons.logging.LogFactory;
+import org.cbio.gdcpipeline.model.ManifestFileData;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -19,7 +19,6 @@ import org.springframework.web.client.RestTemplate;
 import java.io.File;
 import java.io.FileReader;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
 
@@ -31,16 +30,13 @@ import static org.powermock.api.mockito.PowerMockito.when;
  * Created by Dixit on 26/06/17.
  */
 
-@PrepareForTest({XmlFileMappingTasklet.class, LogFactory.class})
+@PrepareForTest({ProcessManifestFileTasklet.class, LogFactory.class})
 @RunWith(PowerMockRunner.class)
-public class XmlFileMappingTaskletTest {
-
+public class ProcessManifestFileTaskletTest {
     File sourceDir;
     String cancer_study_id;
-    String GDC_API_ENDPOINT;
+    String GDC_API_FILES_ENDPOINT;
     int MAX_RESPONSE_SIZE;
-    HashMap<String, List<String>> barcodeToSamplesMap = new HashMap<>();
-
     @Mock
     StepContribution stepContext;
     @Mock
@@ -48,26 +44,23 @@ public class XmlFileMappingTaskletTest {
     @Mock
     RestTemplate restTemplate;
 
-    private XmlFileMappingTasklet tasklet;
+    private ProcessManifestFileTasklet tasklet;
 
     @Before
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
         setProperties();
-        tasklet = new XmlFileMappingTasklet();
+        tasklet = new ProcessManifestFileTasklet();
     }
 
     public void setProperties() throws Exception {
         ClassLoader classLoader = getClass().getClassLoader();
         Properties p = new Properties();
-
         File file = new File(classLoader.getResource("data").getFile());
         sourceDir = new File(file.getAbsolutePath() + File.separator + "GDC");
-
         p.load(new FileReader(new File(classLoader.getResource("application.properties").getFile())));
-
         cancer_study_id = p.getProperty("test.cancer.study.id");
-        GDC_API_ENDPOINT = p.getProperty("gdc.api.endpoint");
+        GDC_API_FILES_ENDPOINT = p.getProperty("gdc.api.files.endpoint");
         MAX_RESPONSE_SIZE = Integer.parseInt(p.getProperty("gdc.max.response.size"));
     }
 
@@ -76,81 +69,40 @@ public class XmlFileMappingTaskletTest {
     public void testExecuteEmptyBiospecimenFileList() throws Exception {
         ReflectionTestUtils.setField(tasklet, "sourceDir", sourceDir.getAbsolutePath());
         ReflectionTestUtils.setField(tasklet, "cancer_study_id", cancer_study_id);
-
         File empty = new File(sourceDir.getAbsolutePath());
         PowerMockito.whenNew(File.class).withAnyArguments().thenReturn(empty);
-
         tasklet.execute(stepContext, chunkContext);
-
     }
 
     @Test(expected = java.lang.Exception.class)
     public void testCallGdcApiServiceUnavailable() throws Exception {
-
-        ReflectionTestUtils.setField(tasklet, "GDC_API_ENDPOINT", GDC_API_ENDPOINT);
+        ReflectionTestUtils.setField(tasklet, "GDC_API_FILES_ENDPOINT", GDC_API_FILES_ENDPOINT);
         ReflectionTestUtils.setField(tasklet, "MAX_RESPONSE_SIZE", MAX_RESPONSE_SIZE);
-        HashMap<String, List<String>> uuidToFilesMap = new HashMap<>();
-        uuidToFilesMap.put("sample", new ArrayList<>());
-        ReflectionTestUtils.setField(tasklet, "uuidToFilesMap", uuidToFilesMap);
-
+        ManifestFileData temp = new ManifestFileData();
+        temp.setId("sample_file_id");
+        List<ManifestFileData> manifestFileList = new ArrayList<>();
+        manifestFileList.add(temp);
+        ReflectionTestUtils.setField(tasklet, "manifestFileList", manifestFileList);
         ResponseEntity<String> response = new ResponseEntity<String>(HttpStatus.INTERNAL_SERVER_ERROR);
-
         RestTemplate restTemplate = mock(RestTemplate.class);
         ReflectionTestUtils.setField(tasklet, "restTemplate", restTemplate);
-
         HttpHeaders httpHeaders = new HttpHeaders();
         httpHeaders.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> entity = new HttpEntity<String>("", httpHeaders);
-
-
-        when(restTemplate.exchange(GDC_API_ENDPOINT, HttpMethod.POST, entity, String.class)).thenReturn(response);
-
-        tasklet.callGdcApi(GDC_API_ENDPOINT, "");
-
+        when(restTemplate.exchange(GDC_API_FILES_ENDPOINT, HttpMethod.POST, entity, String.class)).thenReturn(response);
+        tasklet.callGdcApi(GDC_API_FILES_ENDPOINT, "");
     }
 
     @Test
-    public void testBuildJsonRequestIsValidJson() {
-        Gson gson = new Gson();
-        HashMap<String, List<String>> uuidToFilesMap = new HashMap<>();
-        uuidToFilesMap.put("sample_case_id", new ArrayList<>());
-        ReflectionTestUtils.setField(tasklet, "uuidToFilesMap", uuidToFilesMap);
-
-        String expectedPayload = "{\"filters\":{\"op\":\"in\",\"content\":{\"field\":\"cases.case_id\",\"value\":[\"sample_case_id\"]}}," +
-                "\"format\":\"JSON\",\"fields\":\"file_name,cases.case_id,data_format\"}";
-
+    public void testBuildJsonRequestReturnsValidJson() {
+        ManifestFileData temp = new ManifestFileData();
+        temp.setId("sample_file_id");
+        List<ManifestFileData> manifestFileList = new ArrayList<>();
+        manifestFileList.add(temp);
+        ReflectionTestUtils.setField(tasklet, "manifestFileList", manifestFileList);
+        String expectedPayload = "{\"filters\":{\"op\":\"in\",\"content\":{\"field\":\"file_id\",\"value\":[\"sample_file_id\"]}}," +
+                "\"format\":\"JSON\",\"fields\":\"file_id,file_name,cases.case_id,type,data_format\"}";
         String actualPayload = tasklet.buildJsonRequest();
-
         assertEquals(expectedPayload, actualPayload);
-
-
     }
-
-//    @Test
-//    public void testXmlUnmarshall(){
-//
-//        ClassLoader classLoader = getClass().getClassLoader();
-//        Properties p = new Properties();
-//
-//        File file = new File(classLoader.getResource("data").getFile());
-//        File testXml = new File(file.getAbsolutePath() + File.separator + "GDC/TCGA_BRCA/test_biospecimen.TCGA-3C-AAAU.xml");
-//        HashMap<String, List<String>> uuidToFilesMap = new HashMap<>();
-//        HashMap<String, List<String>> barcodeToSamplesMap = new HashMap<>();
-//        ReflectionTestUtils.setField(tasklet, "uuidToFilesMap", uuidToFilesMap);
-//        ReflectionTestUtils.setField(tasklet, "barcodeToSamplesMap", barcodeToSamplesMap);
-//
-//        try {
-//            tasklet.xmlUnmarshall(testXml);
-//        } catch (JAXBException e) {
-//            e.printStackTrace();
-//        }
-//
-//        System.out.print(uuidToFilesMap.isEmpty());
-//        System.out.print(uuidToFilesMap.isEmpty());
-//
-//
-//
-//    }
-
-
 }

@@ -1,7 +1,5 @@
 package org.cbio.gdcpipeline.tasklet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.cbio.gdcpipeline.util.MetaFileWriter;
 import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;
@@ -14,13 +12,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Created by Dixit on 27/06/17.
+ * @author Dixit Patel
  */
 public class ClinicalMetaDataTasklet implements Tasklet {
-    private String patientFile;
-    @Value("${clinical.data.sample.file}")
-    private String sampleFile;
-
     @Value("${clinical.metadata.sample.file}")
     private String METADATA_SAMPLE_FILE_NAME;
 
@@ -33,13 +27,11 @@ public class ClinicalMetaDataTasklet implements Tasklet {
     @Value("${clinical.data.sample.file}")
     private String DATA_SAMPLE_FILE_NAME;
 
-    @Value("#{jobParameters[study]}")
+    @Value("#{jobParameters[cancer_study_id]}")
     private String cancer_study_id;
 
     @Value("#{jobParameters[outputDirectory]}")
     private String outputDir;
-
-    private static Log LOG = LogFactory.getLog(ClinicalMetaDataTasklet.class);
 
     @Override
     public RepeatStatus execute(StepContribution stepContribution, ChunkContext chunkContext) throws Exception {

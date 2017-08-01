@@ -48,18 +48,17 @@ public class MutationRecord {
     protected String nRefCount;
     protected String nAltCount;
     protected Map<String, String> additionalProperties = new LinkedHashMap<>();
+    protected String caller;
     protected List<String> header = new ArrayList<>();
 
-    public List<String> getFields() {
-        List<String> fields = new ArrayList<>();
-        fields.add("hugoSymbol");
-        fields.add("Os_status");
-        fields.add("Age");
-        fields.add("Sex");
-
-
-        return fields;
-    }
+//    public List<String> getFields() {
+//        List<String> fields = new ArrayList<>();
+//        fields.add("HugoSymbol");
+//        fields.add("Os_status");
+//        fields.add("Age");
+//        fields.add("Sex");
+//        return fields;
+//    }
 
     public MutationRecord() {
         initHeader();
@@ -74,7 +73,7 @@ public class MutationRecord {
                           String verificationStatus, String validationStatus, String mutationStatus, String sequencingPhase,
                           String sequencingSource, String validationMethod, String score, String bamFile, String sequencer,
                           String tumorSampleUUID, String matchedNormSampleUUID, String tRefCount, String tAltCount,
-                          String nRefCount, String nAltCount, Map<String, String> additionalProperties) {
+                          String nRefCount, String nAltCount, String caller, Map<String, String> additionalProperties) {
 
         this.hugoSymbol = hugoSymbol;
         this.entrezGeneId = entrezGeneId;
@@ -114,6 +113,7 @@ public class MutationRecord {
         this.tAltCount = tAltCount;
         this.nRefCount = nRefCount;
         this.nAltCount = nAltCount;
+        this.caller = caller;
         this.additionalProperties = additionalProperties;
         initHeader();
     }
@@ -422,6 +422,13 @@ public class MutationRecord {
         this.nAltCount = nAltCount;
     }
 
+    public void setCaller(String caller){
+        this.caller=caller;
+    }
+
+    public String getCaller(){
+        return this.caller == null ? "": this.caller;
+    }
     public void addAdditionalProperty(String property, String value) {
         this.additionalProperties.put(property, value);
     }

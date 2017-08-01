@@ -1,8 +1,9 @@
 package org.cbio.gdcpipeline.model.rest.response;
 
 /**
- * Created by Dixit on 21/06/17.
+ * @author Dixit Patel
  */
+
 public class GdcApiResponse {
     private Data data;
     private Warning warnings;

@@ -14,7 +14,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Created by Dixit on 11/07/17.
+ *@author Dixit Patel
  */
 public class MutationMetadataTasklet implements Tasklet {
     @Value("${mutation.data.file}")
@@ -23,7 +23,7 @@ public class MutationMetadataTasklet implements Tasklet {
     @Value("${mutation.metadata.file}")
     private String MUTATION_METADATA_FILE;
 
-    @Value("#{jobParameters[study]}")
+    @Value("#{jobParameters[cancer_study_id]}")
     private String cancer_study_id;
 
     @Value("#{jobParameters[outputDirectory]}")
