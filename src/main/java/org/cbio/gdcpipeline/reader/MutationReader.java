@@ -5,8 +5,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.tomcat.util.buf.StringUtils;
 import org.cbio.gdcpipeline.model.cbio.MutationRecord;
+import org.cbio.gdcpipeline.util.CommonDataUtil;
 import org.cbio.gdcpipeline.util.MutationDataFileUtils;
-import org.springframework.batch.item.*;
+import org.springframework.batch.item.ExecutionContext;
+import org.springframework.batch.item.ItemStreamException;
+import org.springframework.batch.item.ItemStreamReader;
 import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.mapping.DefaultLineMapper;
 import org.springframework.batch.item.file.mapping.FieldSetMapper;
@@ -21,7 +24,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Created by Dixit
+ * @author Dixit Patel
  */
 public class MutationReader implements ItemStreamReader<MutationRecord> {
     @Value("#{jobParameters[sourceDirectory]}")
@@ -40,9 +43,10 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
     private static Log LOG = LogFactory.getLog(MutationReader.class);
     public static String DEFAULT_MERGED_MAF_FILENAME = "merged_maf_file.maf";
     private Map<MutationRecord, Set<String>> seenMafRecord = new HashMap<>();
+    private ExecutionContext executionContext;
 
     @Override
-    public MutationRecord read() throws Exception, UnexpectedInputException, ParseException, NonTransientResourceException {
+    public MutationRecord read() throws Exception {
         if (!mafRecords.isEmpty()) {
             return mafRecords.remove(0);
         }
@@ -51,7 +55,38 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
 
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException {
-        File maf_file = (File) executionContext.get("mafToProcess");
+        this.executionContext = executionContext;
+        if (!separate_maf.isEmpty()) {
+            if (separate_maf.equalsIgnoreCase("true")) {
+                File maf_file = (File) executionContext.get("mafToProcess");
+                if (LOG.isInfoEnabled()) {
+                    LOG.info("Processing MAF File : " + maf_file.getAbsolutePath());
+                }
+                readFile(maf_file);
+                File output_file = new File(outputDir,maf_file.getName());
+                executionContext.put("maf_file_to_write", output_file);
+            } else {
+                List<File> maf_files = (List<File>) executionContext.get("maf_files");
+                for (File maf_file : maf_files) {
+                    if (LOG.isInfoEnabled()) {
+                        LOG.info("Processing MAF File : " + maf_file.getAbsolutePath());
+                    }
+                    readFile(maf_file);
+                }
+                File MERGED_MAF_FILE_NAME = new File(outputDir, DEFAULT_MERGED_MAF_FILENAME);
+                executionContext.put("maf_file_to_write", MERGED_MAF_FILE_NAME);
+            }
+            for (Map.Entry<MutationRecord, Set<String>> entry : seenMafRecord.entrySet()) {
+                MutationRecord record = entry.getKey();
+                Set<String> caller = entry.getValue();
+                List<String> list = caller.stream().collect(Collectors.toList());
+                record.setCaller(StringUtils.join(list, '|'));
+                mafRecords.add(record);
+            }
+        }
+    }
+
+    private void readFile(File maf_file) {
         FlatFileItemReader<MutationRecord> reader = new FlatFileItemReader<>();
         DelimitedLineTokenizer tokenizer = new DelimitedLineTokenizer(DelimitedLineTokenizer.DELIMITER_TAB);
         MultiKeyMap mafFileMetadata = new MultiKeyMap();
@@ -59,7 +94,6 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
             mafFileMetadata = MutationDataFileUtils.loadDataFileMetadata(maf_file);
         } catch (IOException e) {
             e.printStackTrace();
-
         }
         String[] mafHeader = (String[]) mafFileMetadata.get(maf_file.getName(), "header");
         tokenizer.setNames(mafHeader);
@@ -73,7 +107,6 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
         reader.setLinesToSkip(metadataCount + 1);
         reader.open(new ExecutionContext());
         try {
-            //TODO for very large files, there can be performance issues ?
             MutationRecord record = reader.read();
             while (record != null) {
                 addRecord(record, maf_file.getName());
@@ -84,55 +117,44 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
             throw new ItemStreamException("Error reading record");
         }
         reader.close();
-
-        if (!separate_maf.isEmpty()) {
-            if (separate_maf.equalsIgnoreCase("true")) {
-                executionContext.put("maf_file_to_write", maf_file);
-            } else {
-                File MERGED_MAF_FILE_NAME = new File(outputDir, DEFAULT_MERGED_MAF_FILENAME);
-                executionContext.put("maf_file_to_write", MERGED_MAF_FILE_NAME);
-            }
-        }
-        for (Map.Entry<MutationRecord, Set<String>> entry : seenMafRecord.entrySet()) {
-            MutationRecord record = entry.getKey();
-            Set<String> caller = entry.getValue();
-            List<String> list = caller.stream().collect(Collectors.toList());
-            record.setCaller(StringUtils.join(list, '|'));
-            mafRecords.add(record);
-        }
     }
 
     private void addRecord(MutationRecord newRecord, String maf_filename) {
+        maf_filename = MutationDataFileUtils.getCallerName(maf_filename);
         if (seenMafRecord.isEmpty()) {
             Set<String> caller = new HashSet<>();
             caller.add(maf_filename);
             seenMafRecord.put(newRecord, caller);
         } else {
             Iterator<Map.Entry<MutationRecord, Set<String>>> iterator = seenMafRecord.entrySet().iterator();
-            Map.Entry<MutationRecord, Set<String>> record = iterator.next();
-            while (iterator.hasNext() && !identicalVariant(record.getKey(), newRecord)) {
-                record = iterator.next();
+            Map.Entry<MutationRecord, Set<String>> entry = iterator.next();
+            while (iterator.hasNext() && !identicalVariant(entry.getKey(),newRecord)){
+                entry = iterator.next();
             }
-            if (!identicalVariant(record.getKey(), newRecord)) {
+            if (!identicalVariant(entry.getKey(), newRecord)) {
                 Set<String> caller = new HashSet<>();
                 caller.add(maf_filename);
                 seenMafRecord.put(newRecord, caller);
             } else {
-                record.getValue().add(maf_filename);
+                entry.getValue().add(maf_filename);
             }
         }
     }
-    // Identical if same : chr, start, end, strand, reference allele, tumor allele, barcode
-    //TODO confirm --> which tumor allele ? which barcode ?
+
     private boolean identicalVariant(MutationRecord record, MutationRecord newRecord) {
         return record.getTumor_Sample_Barcode().equals(newRecord.getTumor_Sample_Barcode()) &&
                 record.getChromosome().equals(newRecord.getChromosome()) &&
                 record.getStart_Position().equals(newRecord.getStart_Position()) &&
                 record.getEnd_Position().equals(newRecord.getEnd_Position()) &&
                 record.getStrand().equals(newRecord.getStrand()) &&
-                record.getReference_Allele().equals(newRecord.getReference_Allele()); //&&
-                //record.getTumor_Seq_Allele1().equals(newRecord.getTumor_Seq_Allele1()) &&
-                //record.getTumor_Seq_Allele2().equals((newRecord.getTumor_Seq_Allele2()));
+                record.getReference_Allele().equals(newRecord.getReference_Allele()) &&( sameTumourSequence(record,newRecord));
+    }
+
+    private boolean sameTumourSequence(MutationRecord record,MutationRecord newRecord) {
+        if (!(record.getTumor_Seq_Allele1().equals(record.getReference_Allele()) || record.getTumor_Seq_Allele1().isEmpty() || CommonDataUtil.isIgnore(record.getTumor_Seq_Allele1()))) {
+            return record.getTumor_Seq_Allele1().equals(newRecord.getTumor_Seq_Allele1());
+        }
+        return record.getTumor_Seq_Allele2().equals(newRecord.getTumor_Seq_Allele2());
     }
 
     private FieldSetMapper<MutationRecord> mutationFieldSetMapper() {

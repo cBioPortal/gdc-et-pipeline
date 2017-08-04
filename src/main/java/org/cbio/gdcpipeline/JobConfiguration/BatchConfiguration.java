@@ -10,7 +10,10 @@ import org.cbio.gdcpipeline.tasklet.SetUpPipelineTasklet;
 import org.cbio.gdcpipeline.util.CommonDataUtil;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
-import org.springframework.batch.core.configuration.annotation.*;
+import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
+import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
+import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.job.builder.FlowBuilder;
 import org.springframework.batch.core.job.flow.Flow;
 import org.springframework.batch.core.job.flow.JobExecutionDecider;
@@ -138,7 +141,6 @@ public class BatchConfiguration {
     public Flow clinicalFileTypeDeciderFlow() {
         return new FlowBuilder<Flow>("clinicalFileTypeDeciderFlow")
                 .start(clinicalFileTypeDecider())
-                .on(CommonDataUtil.GDC_DATAFORMAT.BCR_XML.toString()).to(clinicalXmlDataFlow())
                 .on("FAIL").fail()
                 .build();
     }
@@ -146,8 +148,12 @@ public class BatchConfiguration {
     @Bean
     public Flow gdcPipelineFlow() {
         return new FlowBuilder<Flow>("gdcPipelineFlow")
-                .start(clinicalFileTypeDeciderFlow())
-                .build();
+                .start(clinicalFileTypeDecider())
+                .on(CommonDataUtil.GDC_DATAFORMAT.BCR_XML.toString()).to(clinicalXmlDataFlow())
+                .from(clinicalFileTypeDecider()).on("FAIL").fail()
+                .next(mutationDataStep)
+                .from(mutationDataStep).on("CONTINUE").to(mutationDataStep)
+                .next(mutationMetaDataStep).end();
     }
 
     @Bean
@@ -158,31 +164,27 @@ public class BatchConfiguration {
                 .build();
     }
 
-//    public Flow stepDeciderFlow() {
-//        return new FlowBuilder<Flow>("stepDeciderFlow")
-//                .on(StepDecider.STEP.ALL.toString()).to(gdcPipelineFlow())
-//                .from(stepDecider()).on(StepDecider.STEP.CLINICAL.toString()).to(clinicalFileTypeDeciderFlow())
-//                .from(stepDecider()).on("MUTATION").to(mutationDataFlow())
-//                .build();
-//    }
+    public Flow stepDeciderFlow() {
+        return new FlowBuilder<Flow>("stepDeciderFlow")
+                .start(stepDecider())
+                .on(StepDecider.STEP.ALL.toString()).to(gdcPipelineFlow())
+                .from(stepDecider()).on(StepDecider.STEP.CLINICAL.toString()).to(clinicalFileTypeDeciderFlow())
+                .from(stepDecider()).on(StepDecider.STEP.MUTATION.toString()).to(mutationDataFlow())
+                .build();
+    }
 
-    @JobScope
+    @Bean
     public JobExecutionDecider stepDecider() {
         return new StepDecider();
     }
-//
-//    @Bean
-//    public Flow buildFlow() {
-//        return new FlowBuilder<Flow>("buildFlow")
-//
-//    }
+
 
     // Flow of All Steps
     @Bean
     public Job gdcJob() {
         return jobBuilderFactory.get("gdcJob")
                 .start(configurePipelineFlow())
-                .next(mutationDataFlow())
+                .next(stepDeciderFlow())
                 .end()
                 .build();
     }

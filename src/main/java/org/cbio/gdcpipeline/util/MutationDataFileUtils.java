@@ -6,6 +6,8 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * @author Dixit Patel
@@ -43,5 +45,15 @@ public class MutationDataFileUtils {
         line = line.replaceAll("^" + METADATA_PREFIX + "+", "");
         String[] fields = line.split(DELIMITER, -1);
         return fields;
+    }
+
+    public static String getCallerName(String maf_filename) {
+        // Extract if only TCGA
+        Pattern pattern = Pattern.compile("TCGA\\..*?\\.(.*?)\\.");
+        Matcher matcher = pattern.matcher(maf_filename);
+        if(matcher.find()){
+            return matcher.group(1);
+        }
+        return maf_filename;
     }
 }
