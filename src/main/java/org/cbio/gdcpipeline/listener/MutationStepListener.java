@@ -13,11 +13,9 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.cbio.gdcpipeline.reader.MutationReader.DEFAULT_MERGED_MAF_FILENAME;
-
 /**
- * Created by Dixit on 24/07/17.
- */
+ * @author Dixit Patel
+ **/
 public class MutationStepListener implements StepExecutionListener {
     private static Log LOG = LogFactory.getLog(MutationStepListener.class);
 
@@ -41,42 +39,37 @@ public class MutationStepListener implements StepExecutionListener {
         }
         if (!isStarted) {
             List<File> maf_files = getMutationFileList();
-            stepExecution.getJobExecution().getExecutionContext().put("maf_files", maf_files);
-            if (LOG.isInfoEnabled()) {
-                LOG.info("Processing MAF File : " + maf_files.get(0));
+            if (!separate_maf.isEmpty()) {
+                if (separate_maf.equalsIgnoreCase("true")) {
+                    //read individually
+                    stepExecution.getJobExecution().getExecutionContext().put("maf_files", maf_files);
+                    stepExecution.getExecutionContext().put("mafToProcess", maf_files.remove(0));
+                    stepExecution.getJobExecution().getExecutionContext().put("isStartedMaf", true);
+                } else {
+                    stepExecution.getExecutionContext().put("maf_files", maf_files);
+                }
             }
-            stepExecution.getExecutionContext().put("mafToProcess", maf_files.remove(0));
-            stepExecution.getJobExecution().getExecutionContext().put("isStartedMaf", true);
         } else {
-            List<File> maf_files = (List<File>) stepExecution.getJobExecution().getExecutionContext().get("maf_files");
-            if (LOG.isInfoEnabled()) {
-                LOG.info("Processing MAF File : " + maf_files.get(0).getName());
+            if (!separate_maf.isEmpty()) {
+                if (separate_maf.equalsIgnoreCase("true")) {
+                    List<File> maf_files = (List<File>) stepExecution.getJobExecution().getExecutionContext().get("maf_files");
+                    stepExecution.getExecutionContext().put("mafToProcess", maf_files.remove(0));
+                }
             }
-            stepExecution.getExecutionContext().put("mafToProcess", maf_files.remove(0));
         }
     }
 
     @Override
     public ExitStatus afterStep(StepExecution stepExecution) {
-        List<String> mafList = (List<String>) stepExecution.getJobExecution().getExecutionContext().get("maf_files");
-        if (mafList.isEmpty()) {
-            if (LOG.isInfoEnabled()) {
-                LOG.info(" Finished Processing MAF Files");
+        if (!separate_maf.isEmpty()) {
+            if (separate_maf.equalsIgnoreCase("true")) {
+                List<String> mafList = (List<String>) stepExecution.getJobExecution().getExecutionContext().get("maf_files");
+                if (!mafList.isEmpty()) {
+                    return new ExitStatus("CONTINUE");
+                }
             }
-            boolean isStartedFinalMaf = false;
-            if(stepExecution.getJobExecution().getExecutionContext().containsKey("isStartedFinalMaf")){
-                isStartedFinalMaf=(boolean)stepExecution.getJobExecution().getExecutionContext().get("isStartedFinalMaf");
-            }
-            if (separate_maf.equalsIgnoreCase("false") && !isStartedFinalMaf) {
-                List<File> finalMaf = new ArrayList<>();
-                finalMaf.add(new File(outputDir, DEFAULT_MERGED_MAF_FILENAME));
-                stepExecution.getJobExecution().getExecutionContext().put("maf_files", finalMaf);
-                stepExecution.getJobExecution().getExecutionContext().put("isStartedFinalMaf", true);
-                return new ExitStatus("CONTINUE");
-            }
-            return ExitStatus.COMPLETED;
         }
-        return new ExitStatus("CONTINUE");
+        return ExitStatus.COMPLETED;
     }
 
     public List<File> getMutationFileList() {

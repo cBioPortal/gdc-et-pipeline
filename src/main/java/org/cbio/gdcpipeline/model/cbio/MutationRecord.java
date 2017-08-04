@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Created by Dixit on 24/07/17.
+ * @author Dixit Patel.
  */
 public class MutationRecord {
     protected String hugoSymbol;
@@ -50,15 +50,6 @@ public class MutationRecord {
     protected Map<String, String> additionalProperties = new LinkedHashMap<>();
     protected String caller;
     protected List<String> header = new ArrayList<>();
-
-//    public List<String> getFields() {
-//        List<String> fields = new ArrayList<>();
-//        fields.add("HugoSymbol");
-//        fields.add("Os_status");
-//        fields.add("Age");
-//        fields.add("Sex");
-//        return fields;
-//    }
 
     public MutationRecord() {
         initHeader();
@@ -422,13 +413,14 @@ public class MutationRecord {
         this.nAltCount = nAltCount;
     }
 
-    public void setCaller(String caller){
-        this.caller=caller;
+    public void setCaller(String caller) {
+        this.caller = caller;
     }
 
-    public String getCaller(){
-        return this.caller == null ? "": this.caller;
+    public String getCaller() {
+        return this.caller == null ? "" : this.caller;
     }
+
     public void addAdditionalProperty(String property, String value) {
         this.additionalProperties.put(property, value);
     }
@@ -454,8 +446,7 @@ public class MutationRecord {
     }
 
     public List<String> getHeader() {
-
-        return  header;
+        return header;
     }
 
     public void initHeader() {

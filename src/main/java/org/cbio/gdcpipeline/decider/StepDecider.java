@@ -20,7 +20,7 @@ public class StepDecider implements JobExecutionDecider {
             return new FlowExecutionStatus(STEP.CLINICAL.toString());
         }
         if (stepToRun.contains(STEP.MUTATION.toString())) {
-            return new FlowExecutionStatus("MUTATION");
+            return new FlowExecutionStatus(STEP.MUTATION.toString());
         }
         return new FlowExecutionStatus(STEP.ALL.toString());
     }

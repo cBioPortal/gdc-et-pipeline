@@ -42,8 +42,7 @@ public class MutationWriter implements ItemStreamWriter<MutationRecord> {
 
     private void configureWriter(File maf_filename) {
         MutationRecord record = new MutationRecord();
-        mutationWriter.setShouldDeleteIfExists(false);
-        mutationWriter.setAppendAllowed(true);
+        mutationWriter.setShouldDeleteIfExists(true);
         mutationWriter.setLineSeparator(System.lineSeparator());
         mutationWriter.setHeaderCallback(mutationHeader(record));
         DelimitedLineAggregator<MutationRecord> lineAggregator = new DelimitedLineAggregator<>();
