@@ -3,12 +3,32 @@ package org.cbio.gdcpipeline.model.rest.response;
 import java.util.List;
 
 /**
- * Created by Dixit on 21/06/17.
+ * @author Dixit Patel
  */
-public class Hits {
+public class Hits{
+    private String file_id;
     private String file_name;
     private List<Case> cases;
+    private String type;
     private String data_format;
+
+    public Hits(){}
+
+    public String getFile_id() {
+        return file_id;
+    }
+
+    public void setFile_id(String file_id) {
+        this.file_id = file_id;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
+    }
 
     public String getData_format() {
         return data_format;

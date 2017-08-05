@@ -4,10 +4,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Created by Dixit on 13/07/17.
+ * @author Dixit Patel
  */
-public interface ClinicalDataSource {
 
+public interface ClinicalDataSource {
     List<Map<String, String>> getClinicalData();
 
     List<String> getSampleHeader();

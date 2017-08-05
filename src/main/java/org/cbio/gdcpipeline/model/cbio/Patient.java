@@ -8,16 +8,15 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Created by Dixit on 24/06/17.
+ * @author Dixit Patel
  */
-public class Patient extends ClinicalDataModel {
 
+public class Patient extends ClinicalDataModel {
     private String patient_id;
     private String sex;
     private int age;
     private String os_status;
     private ClinicalDataSourceImpl clinicalDataSource = new ClinicalDataSourceImpl();
-
 
     public Patient() {
     }
@@ -27,7 +26,6 @@ public class Patient extends ClinicalDataModel {
         this.sex = sex;
         this.age = age;
         this.os_status = os_status;
-
     }
 
     @Override
@@ -37,11 +35,8 @@ public class Patient extends ClinicalDataModel {
         fields.add("Os_status");
         fields.add("Age");
         fields.add("Sex");
-
-
         return fields;
     }
-
 
     @Override
     public Map<String, List<String>> getHeaders() {
@@ -74,7 +69,6 @@ public class Patient extends ClinicalDataModel {
     }
 
     public String getOs_status() {
-
         return os_status;
     }
 
