@@ -1,5 +1,7 @@
 package org.cbio.gdcpipeline.model.cbio;
 
+import org.cbio.gdcpipeline.util.CommonDataUtil;
+
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -486,5 +488,40 @@ public class MutationRecord {
         header.add("t_alt_count");
         header.add("n_ref_count");
         header.add("n_alt_count");
+    }
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        MutationRecord record = (MutationRecord) o;
+
+        if (!getChromosome().equals(record.getChromosome())) return false;
+        if (!startPosition.equals(record.startPosition)) return false;
+        if (!endPosition.equals(record.endPosition)) return false;
+        if (!getStrand().equals(record.getStrand())) return false;
+        if (!referenceAllele.equals(record.referenceAllele)) return false;
+        if (!tumorSampleBarcode.equals(record.tumorSampleBarcode)) return false;
+        return sameTumourSequence(record);
+    }
+
+    private boolean sameTumourSequence(MutationRecord record) {
+        if (!(getTumor_Seq_Allele1().equals(getReference_Allele()) || getTumor_Seq_Allele1().isEmpty() || CommonDataUtil.isIgnore(getTumor_Seq_Allele1()))) {
+            return getTumor_Seq_Allele1().equals(getTumor_Seq_Allele1());
+        }
+        return getTumor_Seq_Allele2().equals(record.getTumor_Seq_Allele2());
+    }
+
+    @Override
+    public int hashCode() {
+        int result = getChromosome().hashCode();
+        result = 31 * result + startPosition.hashCode();
+        result = 31 * result + endPosition.hashCode();
+        result = 31 * result + getStrand().hashCode();
+        result = 31 * result + referenceAllele.hashCode();
+        result = 31 * result + (tumorSeqAllele1 != null ? tumorSeqAllele1.hashCode() : 0);
+        result = 31 * result + tumorSeqAllele2.hashCode();
+        result = 31 * result + tumorSampleBarcode.hashCode();
+        return result;
     }
 }

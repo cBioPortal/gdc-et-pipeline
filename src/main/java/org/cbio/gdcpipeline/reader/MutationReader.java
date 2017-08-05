@@ -5,7 +5,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.tomcat.util.buf.StringUtils;
 import org.cbio.gdcpipeline.model.cbio.MutationRecord;
-import org.cbio.gdcpipeline.util.CommonDataUtil;
 import org.cbio.gdcpipeline.util.MutationDataFileUtils;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
@@ -128,10 +127,10 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
         } else {
             Iterator<Map.Entry<MutationRecord, Set<String>>> iterator = seenMafRecord.entrySet().iterator();
             Map.Entry<MutationRecord, Set<String>> entry = iterator.next();
-            while (iterator.hasNext() && !identicalVariant(entry.getKey(),newRecord)){
+            while (iterator.hasNext() && !(entry.getKey().equals(newRecord))){
                 entry = iterator.next();
             }
-            if (!identicalVariant(entry.getKey(), newRecord)) {
+            if (!entry.getKey().equals(newRecord)) {
                 Set<String> caller = new HashSet<>();
                 caller.add(maf_filename);
                 seenMafRecord.put(newRecord, caller);
@@ -139,22 +138,6 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
                 entry.getValue().add(maf_filename);
             }
         }
-    }
-
-    private boolean identicalVariant(MutationRecord record, MutationRecord newRecord) {
-        return record.getTumor_Sample_Barcode().equals(newRecord.getTumor_Sample_Barcode()) &&
-                record.getChromosome().equals(newRecord.getChromosome()) &&
-                record.getStart_Position().equals(newRecord.getStart_Position()) &&
-                record.getEnd_Position().equals(newRecord.getEnd_Position()) &&
-                record.getStrand().equals(newRecord.getStrand()) &&
-                record.getReference_Allele().equals(newRecord.getReference_Allele()) &&( sameTumourSequence(record,newRecord));
-    }
-
-    private boolean sameTumourSequence(MutationRecord record,MutationRecord newRecord) {
-        if (!(record.getTumor_Seq_Allele1().equals(record.getReference_Allele()) || record.getTumor_Seq_Allele1().isEmpty() || CommonDataUtil.isIgnore(record.getTumor_Seq_Allele1()))) {
-            return record.getTumor_Seq_Allele1().equals(newRecord.getTumor_Seq_Allele1());
-        }
-        return record.getTumor_Seq_Allele2().equals(newRecord.getTumor_Seq_Allele2());
     }
 
     private FieldSetMapper<MutationRecord> mutationFieldSetMapper() {
