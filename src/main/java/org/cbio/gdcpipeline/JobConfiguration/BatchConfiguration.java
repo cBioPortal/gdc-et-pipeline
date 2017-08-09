@@ -131,8 +131,8 @@ public class BatchConfiguration {
     }
 
     @Bean
-    public Flow gdcPipelineFlow() {
-        return new FlowBuilder<Flow>("gdcPipelineFlow")
+    public Flow gdcAllDatatypesFlow() {
+        return new FlowBuilder<Flow>("gdcAllDatatypesFlow")
                 .start(clinicalFileTypeDeciderFlow())
                 .build();
     }
@@ -151,10 +151,10 @@ public class BatchConfiguration {
     }
 
     @Bean
-    public Flow buildFlow() {
-        return new FlowBuilder<Flow>("buildFlow")
+    public Flow gdcPipelineFlow() {
+        return new FlowBuilder<Flow>("gdcPipelineFlow")
                 .start(stepDecider())
-                .on(StepDecider.STEP.ALL.toString()).to(gdcPipelineFlow())
+                .on(StepDecider.STEP.ALL.toString()).to(gdcAllDatatypesFlow())
                 .on(StepDecider.STEP.CLINICAL.toString()).to(clinicalFileTypeDeciderFlow())
                 .build();
     }
@@ -164,7 +164,7 @@ public class BatchConfiguration {
     public Job gdcJob() {
         return jobBuilderFactory.get("gdcJob")
                 .start(configurePipelineFlow())
-                .next(buildFlow())
+                .next(gdcPipelineFlow())
                 .end()
                 .build();
     }
