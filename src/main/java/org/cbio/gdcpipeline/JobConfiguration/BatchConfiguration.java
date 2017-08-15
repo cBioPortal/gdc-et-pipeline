@@ -4,8 +4,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.cbio.gdcpipeline.decider.ClinicalFileTypeDecider;
 import org.cbio.gdcpipeline.decider.StepDecider;
+import org.cbio.gdcpipeline.tasklet.BiospecimenXmlDataTasklet;
+import org.cbio.gdcpipeline.tasklet.ProcessManifestFileTasklet;
 import org.cbio.gdcpipeline.tasklet.SetUpPipelineTasklet;
-import org.cbio.gdcpipeline.tasklet.XmlFileMappingTasklet;
+import org.cbio.gdcpipeline.util.CommonDataUtil;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.*;
@@ -18,9 +20,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
 import javax.annotation.Resource;
 
+/**
+ * @author Dixit Patel
+ */
 @EnableBatchProcessing
 @Configuration
 public class BatchConfiguration {
@@ -40,22 +44,6 @@ public class BatchConfiguration {
     @Value("${chunk.interval}")
     private int chunkInterval;
 
-    @Bean
-    public ExecutionContextPromotionListener jobExecutionListener() {
-        String[] keys = new String[]{"barcodeToSamplesMap", "uuidToFilesMap"};
-        ExecutionContextPromotionListener executionContextPromotionListener = new ExecutionContextPromotionListener();
-        executionContextPromotionListener.setKeys(keys);
-        return executionContextPromotionListener;
-
-    }
-
-    @Bean
-    public Step xmlFileMappingStep() {
-        return stepBuilderFactory.get("xmlFileMappingStep")
-                .listener(jobExecutionListener())
-                .tasklet(xmlFileMappingTasklet())
-                .build();
-    }
 
     @Bean
     public Step setUpPipeline() {
@@ -63,6 +51,31 @@ public class BatchConfiguration {
                 .tasklet(setUpPipelineTasklet())
                 .build();
     }
+
+    @Bean
+    public ExecutionContextPromotionListener processManifestFileListener() {
+        String[] keys = new String[]{"gdcFileMetadatas"};
+        ExecutionContextPromotionListener executionContextPromotionListener = new ExecutionContextPromotionListener();
+        executionContextPromotionListener.setKeys(keys);
+        return executionContextPromotionListener;
+
+    }
+
+    @Bean
+    public Step processManifestFile() {
+        return stepBuilderFactory.get("processManifestFile")
+                .listener(processManifestFileListener())
+                .tasklet(processManifestFileTasklet())
+                .build();
+    }
+
+
+    @Bean
+    @StepScope
+    public Tasklet processManifestFileTasklet() {
+        return new ProcessManifestFileTasklet();
+    }
+
 
     @Bean
     @StepScope
@@ -73,32 +86,62 @@ public class BatchConfiguration {
 
     @Bean
     @StepScope
-    public Tasklet xmlFileMappingTasklet() {
-        return new XmlFileMappingTasklet();
+    public Tasklet biospecimenXmlDataTasklet() {
+        return new BiospecimenXmlDataTasklet();
     }
 
     @Bean
-    @JobScope
+    public ExecutionContextPromotionListener biospecimenXmlDataListener() {
+        String[] keys = new String[]{"barcodeToSamplesMap"};
+        ExecutionContextPromotionListener executionContextPromotionListener = new ExecutionContextPromotionListener();
+        executionContextPromotionListener.setKeys(keys);
+        return executionContextPromotionListener;
+
+    }
+
+    @Bean
+    public Step biospecimenXmlDataStep() {
+        return stepBuilderFactory.get("biospecimenXmlDataStep")
+                .listener(biospecimenXmlDataListener())
+                .tasklet(biospecimenXmlDataTasklet())
+                .build();
+    }
+
+    @Bean
+    public Flow clinicalXmlDataFlow() {
+        return new FlowBuilder<Flow>("clinicalXmlDataFlow")
+                .start(biospecimenXmlDataStep())
+                .next(clinicalDataStep)
+                .next(clinicalMetaDataStep)
+                .build();
+    }
+
+    @Bean
     public JobExecutionDecider clinicalFileTypeDecider() {
         return new ClinicalFileTypeDecider();
+    }
+
+    @Bean
+    public Flow clinicalFileTypeDeciderFlow() {
+        return new FlowBuilder<Flow>("clinicalFileTypeDeciderFlow")
+                .start(clinicalFileTypeDecider())
+                .on(CommonDataUtil.GDC_DATAFORMAT.BCR_XML.toString()).to(clinicalXmlDataFlow())
+                .on("FAIL").fail()
+                .build();
+    }
+
+    @Bean
+    public Flow gdcAllDatatypesFlow() {
+        return new FlowBuilder<Flow>("gdcAllDatatypesFlow")
+                .start(clinicalFileTypeDeciderFlow())
+                .build();
     }
 
     @Bean
     public Flow configurePipelineFlow() {
         return new FlowBuilder<Flow>("configurePipelineFlow")
                 .start(setUpPipeline())
-                .on("COMPLETED").to(clinicalFileTypeDecider())
-                .from(clinicalFileTypeDecider()).on("XML").to(xmlFileMappingStep())
-                .from(clinicalFileTypeDecider()).on("XLSX").fail()
-                .from(clinicalFileTypeDecider()).on("FAIL").fail()
-                .build();
-    }
-
-    @Bean
-    public Flow clinicalDataFlow() {
-        return new FlowBuilder<Flow>("clinicalDataFlow")
-                .start(clinicalDataStep)
-                .next(clinicalMetaDataStep)
+                .next(processManifestFile())
                 .build();
     }
 
@@ -110,17 +153,9 @@ public class BatchConfiguration {
     @Bean
     public Flow gdcPipelineFlow() {
         return new FlowBuilder<Flow>("gdcPipelineFlow")
-                .start(clinicalDataFlow())
-                .build();
-    }
-
-    @Bean
-    public Flow buildFlow() {
-        return new FlowBuilder<Flow>("buildFlow")
                 .start(stepDecider())
-                .on(StepDecider.STEP.ALL.toString()).to(gdcPipelineFlow())
-                .on(StepDecider.STEP.CLINICAL.toString()).to(clinicalDataFlow())
-                .on(StepDecider.STEP.MUTATION.toString()).fail()
+                .on(StepDecider.STEP.ALL.toString()).to(gdcAllDatatypesFlow())
+                .on(StepDecider.STEP.CLINICAL.toString()).to(clinicalFileTypeDeciderFlow())
                 .build();
     }
 
@@ -129,7 +164,7 @@ public class BatchConfiguration {
     public Job gdcJob() {
         return jobBuilderFactory.get("gdcJob")
                 .start(configurePipelineFlow())
-                .next(buildFlow())
+                .next(gdcPipelineFlow())
                 .end()
                 .build();
     }

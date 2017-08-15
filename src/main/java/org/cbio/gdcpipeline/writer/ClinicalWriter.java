@@ -6,7 +6,7 @@ import org.apache.tomcat.util.buf.StringUtils;
 import org.cbio.gdcpipeline.model.cbio.ClinicalDataModel;
 import org.cbio.gdcpipeline.model.cbio.Patient;
 import org.cbio.gdcpipeline.model.cbio.Sample;
-import org.cbio.gdcpipeline.step.ClinicalStep;
+import org.cbio.gdcpipeline.util.CommonDataUtil;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.ItemStreamWriter;
@@ -27,7 +27,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Created by Dixit on 02/07/17.
+ * @author Dixit Patel
  */
 public class ClinicalWriter implements ItemStreamWriter<ClinicalDataModel> {
     @Value("#{jobParameters[outputDirectory]}")
@@ -40,11 +40,11 @@ public class ClinicalWriter implements ItemStreamWriter<ClinicalDataModel> {
     private String sampleFile;
 
     private ExecutionContext executionContext;
-    private ClinicalStep.CLINICAL_TYPE writerType;
+    private CommonDataUtil.CLINICAL_TYPE writerType;
     private FlatFileItemWriter<ClinicalDataModel> clinicalWriter = new FlatFileItemWriter<>();
     private static Log LOG = LogFactory.getLog(ClinicalWriter.class);
 
-    public ClinicalWriter(ClinicalStep.CLINICAL_TYPE writerType) {
+    public ClinicalWriter(CommonDataUtil.CLINICAL_TYPE writerType) {
         this.writerType = writerType;
     }
 
@@ -58,13 +58,13 @@ public class ClinicalWriter implements ItemStreamWriter<ClinicalDataModel> {
     public void write(List<? extends ClinicalDataModel> list) throws Exception {
         //configure writer
         List<ClinicalDataModel> filterList = new ArrayList<>();
-        if (writerType.equals(ClinicalStep.CLINICAL_TYPE.PATIENT)) {
+        if (writerType.equals(CommonDataUtil.CLINICAL_TYPE.PATIENT)) {
             for (ClinicalDataModel data : list) {
                 if (data instanceof Patient) {
                     filterList.add(data);
                 }
             }
-        } else if (writerType.equals(ClinicalStep.CLINICAL_TYPE.SAMPLE)) {
+        } else if (writerType.equals(CommonDataUtil.CLINICAL_TYPE.SAMPLE)) {
             for (ClinicalDataModel data : list) {
                 if (data instanceof Sample) {
                     filterList.add(data);
@@ -77,7 +77,7 @@ public class ClinicalWriter implements ItemStreamWriter<ClinicalDataModel> {
     private void configureWriter() {
         ClinicalDataModel data = null;
         String filename;
-        if (writerType.equals(ClinicalStep.CLINICAL_TYPE.PATIENT)) {
+        if (writerType.equals(CommonDataUtil.CLINICAL_TYPE.PATIENT)) {
             data = new Patient();
             filename = patientFile;
         } else {

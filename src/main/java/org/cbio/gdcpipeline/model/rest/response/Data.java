@@ -3,10 +3,9 @@ package org.cbio.gdcpipeline.model.rest.response;
 import java.util.List;
 
 /**
- * Created by Dixit on 21/06/17.
+ * @author Dixit Patel
  */
 public class Data {
-
     private List<Hits> hits;
     private Pagination pagination;
 
