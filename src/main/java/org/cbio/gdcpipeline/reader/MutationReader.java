@@ -30,6 +30,12 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
     @Value("#{jobParameters[sourceDirectory]}")
     private String sourceDir;
 
+    @Value("${mutation.data.file.prefix}")
+    private String MUTATION_DATA_FILE_PREFIX;
+
+    @Value("${mutation.default.merged.maf.file}")
+    private String DEFAULT_MERGED_MAF_FILENAME;
+
     @Value("#{jobParameters[outputDirectory]}")
     private String outputDir;
 
@@ -41,7 +47,6 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
 
     private List<MutationRecord> mafRecords = new ArrayList<>();
     private static Log LOG = LogFactory.getLog(MutationReader.class);
-    public static String DEFAULT_MERGED_MAF_FILENAME = "merged_maf_file.maf";
     private Map<MutationRecord, Set<String>> seenMafRecord = new HashMap<>();
     private ExecutionContext executionContext;
 
@@ -56,23 +61,18 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException {
         this.executionContext = executionContext;
-        if (!separate_maf.isEmpty()) {
+        List<File> maf_files = (List<File>) executionContext.get("mafToProcess");
+        for (File file : maf_files) {
+            if (LOG.isInfoEnabled()) {
+                LOG.info("Processing MAF File : " + file.getAbsolutePath());
+            }
+            readFile(file);
+        }
             if (separate_maf.equalsIgnoreCase("true")) {
-                File maf_file = (File) executionContext.get("mafToProcess");
-                if (LOG.isInfoEnabled()) {
-                    LOG.info("Processing MAF File : " + maf_file.getAbsolutePath());
-                }
-                readFile(maf_file);
-                File output_file = new File(outputDir,maf_file.getName());
+                File output_file = new File(outputDir, MUTATION_DATA_FILE_PREFIX+maf_files.get(0).getName());
                 executionContext.put("maf_file_to_write", output_file);
-            } else {
-                List<File> maf_files = (List<File>) executionContext.get("maf_files");
-                for (File maf_file : maf_files) {
-                    if (LOG.isInfoEnabled()) {
-                        LOG.info("Processing MAF File : " + maf_file.getAbsolutePath());
-                    }
-                    readFile(maf_file);
-                }
+            }
+            else {
                 File MERGED_MAF_FILE_NAME = new File(outputDir, DEFAULT_MERGED_MAF_FILENAME);
                 executionContext.put("maf_file_to_write", MERGED_MAF_FILE_NAME);
             }
@@ -84,7 +84,8 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
                 mafRecords.add(record);
             }
         }
-    }
+
+
 
     private void readFile(File maf_file) {
         FlatFileItemReader<MutationRecord> reader = new FlatFileItemReader<>();
@@ -128,7 +129,7 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
         } else {
             Iterator<Map.Entry<MutationRecord, Set<String>>> iterator = seenMafRecord.entrySet().iterator();
             Map.Entry<MutationRecord, Set<String>> entry = iterator.next();
-            while (iterator.hasNext() && !identicalVariant(entry.getKey(),newRecord)){
+            while (iterator.hasNext() && !identicalVariant(entry.getKey(), newRecord)) {
                 entry = iterator.next();
             }
             if (!identicalVariant(entry.getKey(), newRecord)) {
@@ -147,11 +148,11 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
                 record.getStart_Position().equals(newRecord.getStart_Position()) &&
                 record.getEnd_Position().equals(newRecord.getEnd_Position()) &&
                 record.getStrand().equals(newRecord.getStrand()) &&
-                record.getReference_Allele().equals(newRecord.getReference_Allele()) &&( sameTumourSequence(record,newRecord));
+                record.getReference_Allele().equals(newRecord.getReference_Allele()) && (sameTumourSequence(record, newRecord));
     }
 
-    private boolean sameTumourSequence(MutationRecord record,MutationRecord newRecord) {
-        if (!(record.getTumor_Seq_Allele1().equals(record.getReference_Allele()) || record.getTumor_Seq_Allele1().isEmpty() || CommonDataUtil.isIgnore(record.getTumor_Seq_Allele1()))) {
+    private boolean sameTumourSequence(MutationRecord record, MutationRecord newRecord) {
+        if (!(record.getTumor_Seq_Allele1().equals(record.getReference_Allele()) || record.getTumor_Seq_Allele1().isEmpty() || CommonDataUtil.hasMissingKeys(record.getTumor_Seq_Allele1()))) {
             return record.getTumor_Seq_Allele1().equals(newRecord.getTumor_Seq_Allele1());
         }
         return record.getTumor_Seq_Allele2().equals(newRecord.getTumor_Seq_Allele2());

@@ -126,26 +126,7 @@ public class ClinicalReader implements ItemStreamReader<ClinicalDataModel> {
     }
 
     private List<File> getClinicalFileList() throws ItemStreamException {
-        List<File> clincalFiles = new ArrayList<>();
-        List<String> filenames = new ArrayList<>();
-        if(!gdcFileMetadatas.isEmpty()){
-            for (GdcFileMetadata data : gdcFileMetadatas) {
-                if (data.getType().equals(CommonDataUtil.GDC_TYPE.CLINICAL.toString())) {
-                    filenames.add(data.getFile_name());
-                }
-            }
-        }
-        for (String f : filenames) {
-            File file = new File(sourceDir, f);
-            if (file.exists()) {
-                clincalFiles.add(file);
-            } else {
-                if (LOG.isInfoEnabled()) {
-                    LOG.info("Clinical File : " + file.getAbsolutePath() + " not found.\nSkipping File");
-                }
-            }
-        }
-        return clincalFiles;
+       return CommonDataUtil.getFileList(gdcFileMetadatas,CommonDataUtil.GDC_TYPE.CLINICAL,sourceDir);
     }
 
     @Override

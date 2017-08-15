@@ -2,22 +2,31 @@ package org.cbio.gdcpipeline.listener;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.tomcat.util.buf.StringUtils;
 import org.cbio.gdcpipeline.model.rest.response.GdcFileMetadata;
 import org.cbio.gdcpipeline.util.CommonDataUtil;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.StepExecution;
 import org.springframework.batch.core.StepExecutionListener;
+import org.springframework.batch.item.ItemStreamException;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * @author Dixit Patel
  **/
 public class MutationStepListener implements StepExecutionListener {
     private static Log LOG = LogFactory.getLog(MutationStepListener.class);
+
+    @Value("${mutation.data.file.prefix}")
+    private String MUTATION_DATA_FILE_PREFIX;
+
+    @Value("${mutation.default.merged.maf.file}")
+    private String MUTATION_DEFAULT_MERGED_MAF_FILE;
 
     @Value("#{jobParameters[sourceDirectory]}")
     private String sourceDir;
@@ -41,19 +50,34 @@ public class MutationStepListener implements StepExecutionListener {
             List<File> maf_files = getMutationFileList();
             if (!separate_maf.isEmpty()) {
                 if (separate_maf.equalsIgnoreCase("true")) {
+                    //used by metadata step
+                    List<String> maf_filenames = new ArrayList<>();
+                    for(File file : maf_files){
+                        maf_filenames.add(MUTATION_DATA_FILE_PREFIX+file.getName());
+                    }
+                    stepExecution.getJobExecution().getExecutionContext().put("mutation_data_filenames", maf_filenames);
+
                     //read individually
+                    List<File> mafToProcess = new ArrayList<>();
+                    mafToProcess.add(maf_files.remove(0));
                     stepExecution.getJobExecution().getExecutionContext().put("maf_files", maf_files);
-                    stepExecution.getExecutionContext().put("mafToProcess", maf_files.remove(0));
+                    stepExecution.getExecutionContext().put("mafToProcess", mafToProcess);
                     stepExecution.getJobExecution().getExecutionContext().put("isStartedMaf", true);
                 } else {
-                    stepExecution.getExecutionContext().put("maf_files", maf_files);
+                    //Read all MAF's together
+                    List<String> mutation_data_filenames = new ArrayList<>();
+                    mutation_data_filenames.add(MUTATION_DEFAULT_MERGED_MAF_FILE);
+                    stepExecution.getJobExecution().getExecutionContext().put("mutation_data_filenames",mutation_data_filenames );
+                    stepExecution.getExecutionContext().put("mafToProcess", maf_files);
                 }
             }
         } else {
             if (!separate_maf.isEmpty()) {
                 if (separate_maf.equalsIgnoreCase("true")) {
                     List<File> maf_files = (List<File>) stepExecution.getJobExecution().getExecutionContext().get("maf_files");
-                    stepExecution.getExecutionContext().put("mafToProcess", maf_files.remove(0));
+                    List<File> mafToProcess = new ArrayList<>();
+                    mafToProcess.add(maf_files.remove(0));
+                    stepExecution.getExecutionContext().put("mafToProcess", mafToProcess);
                 }
             }
         }
@@ -73,25 +97,12 @@ public class MutationStepListener implements StepExecutionListener {
     }
 
     public List<File> getMutationFileList() {
-        List<File> maf_files = new ArrayList<>();
-        List<String> filenames = new ArrayList<>();
-        if (!gdcFileMetadatas.isEmpty()) {
-            for (GdcFileMetadata data : gdcFileMetadatas) {
-                if (data.getType().equals(CommonDataUtil.GDC_TYPE.MUTATION.toString())) {
-                    filenames.add(data.getFile_name().replace(".gz", ""));
-                }
-            }
+        List<File> fileList = CommonDataUtil.getFileList(gdcFileMetadatas, CommonDataUtil.GDC_TYPE.MUTATION, sourceDir);
+        List<File> mutationFileList = new ArrayList<>();
+        for (File file : fileList) {
+            File maf =new File(sourceDir,file.getName().replace(".gz", ""));
+            mutationFileList.add(maf);
         }
-        for (String f : filenames) {
-            File file = new File(sourceDir, f);
-            if (file.exists()) {
-                maf_files.add(file);
-            } else {
-                if (LOG.isInfoEnabled()) {
-                    LOG.info("MAF File : " + file.getAbsolutePath() + " not found.\nSkipping File");
-                }
-            }
-        }
-        return maf_files;
+        return mutationFileList;
     }
 }

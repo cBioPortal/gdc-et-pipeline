@@ -15,6 +15,7 @@ import java.util.regex.Pattern;
 public class MutationDataFileUtils {
     public static String METADATA_PREFIX = "#";
     public static String DELIMITER = "\t";
+    private static Pattern tcga_caller_pattern = Pattern.compile("TCGA\\..*?\\.(.*?)\\.");
 
     public static MultiKeyMap loadDataFileMetadata(File dataFile) throws IOException {
         String[] columnNames;
@@ -49,8 +50,7 @@ public class MutationDataFileUtils {
 
     public static String getCallerName(String maf_filename) {
         // Extract if only TCGA
-        Pattern pattern = Pattern.compile("TCGA\\..*?\\.(.*?)\\.");
-        Matcher matcher = pattern.matcher(maf_filename);
+        Matcher matcher = tcga_caller_pattern.matcher(maf_filename);
         if(matcher.find()){
             return matcher.group(1);
         }

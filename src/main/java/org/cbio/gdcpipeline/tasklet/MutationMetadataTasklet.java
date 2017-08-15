@@ -2,6 +2,7 @@ package org.cbio.gdcpipeline.tasklet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.tomcat.util.buf.StringUtils;
 import org.cbio.gdcpipeline.util.MetaFileWriter;
 import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;
@@ -11,14 +12,17 @@ import org.springframework.beans.factory.annotation.Value;
 
 import java.io.File;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  *@author Dixit Patel
  */
 public class MutationMetadataTasklet implements Tasklet {
-    @Value("${mutation.data.file}")
-    private String MUTATION_DATA_FILE ;
+
+    @Value("#{jobExecutionContext[mutation_data_filenames]}")
+    private List<String> MUTATION_DATA_FILES;
 
     @Value("${mutation.metadata.file}")
     private String MUTATION_METADATA_FILE;
@@ -43,7 +47,7 @@ public class MutationMetadataTasklet implements Tasklet {
         mutationMetadata.put("show_profile_in_analysis_tab","true");
         mutationMetadata.put("profile_description","Mutation data from whole exome sequencing");
         mutationMetadata.put("profile_name","Mutations");
-        mutationMetadata.put("data_filename",MUTATION_DATA_FILE);
+        mutationMetadata.put("data_filename", StringUtils.join(MUTATION_DATA_FILES,','));
 
         MetaFileWriter.writeMetadata(mutationMetadata,metafile);
         return RepeatStatus.FINISHED;
