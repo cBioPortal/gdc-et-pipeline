@@ -1,14 +1,13 @@
 package org.cbio.gdcpipeline.model.cbio;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
  * @author Dixit Patel.
  */
-public class MutationRecord {
+public class MutationRecord extends org.cbioportal.models.MutationRecord{
+    protected String caller;
+
     protected String hugoSymbol;
     protected String entrezGeneId;
     protected String center;
@@ -47,13 +46,11 @@ public class MutationRecord {
     protected String tAltCount;
     protected String nRefCount;
     protected String nAltCount;
-    protected Map<String, String> additionalProperties = new LinkedHashMap<>();
-    protected String caller;
-    protected List<String> header = new ArrayList<>();
 
-    public MutationRecord() {
-        initHeader();
-    }
+
+
+    public MutationRecord(){super();}
+
 
     public MutationRecord(String hugoSymbol, String entrezGeneId, String center, String ncbiBuild,
                           String chromosome, String startPosition, String endPosition, String strand, String variantClassification,
@@ -64,7 +61,7 @@ public class MutationRecord {
                           String verificationStatus, String validationStatus, String mutationStatus, String sequencingPhase,
                           String sequencingSource, String validationMethod, String score, String bamFile, String sequencer,
                           String tumorSampleUUID, String matchedNormSampleUUID, String tRefCount, String tAltCount,
-                          String nRefCount, String nAltCount, String caller, Map<String, String> additionalProperties) {
+                          String nRefCount, String nAltCount,String caller, Map<String, String> additionalProperties) {
 
         this.hugoSymbol = hugoSymbol;
         this.entrezGeneId = entrezGeneId;
@@ -108,6 +105,15 @@ public class MutationRecord {
         this.additionalProperties = additionalProperties;
         initHeader();
     }
+
+    public void setCaller(String caller) {
+        this.caller = caller;
+    }
+
+    public String getCaller() {
+        return this.caller == null ? "" : this.caller;
+    }
+
 
     public String getHugo_Symbol() {
         return this.hugoSymbol == null ? "" : this.hugoSymbol;
@@ -413,78 +419,6 @@ public class MutationRecord {
         this.nAltCount = nAltCount;
     }
 
-    public void setCaller(String caller) {
-        this.caller = caller;
-    }
 
-    public String getCaller() {
-        return this.caller == null ? "" : this.caller;
-    }
 
-    public void addAdditionalProperty(String property, String value) {
-        this.additionalProperties.put(property, value);
-    }
-
-    public Map<String, String> getAdditionalProperties() {
-        return this.additionalProperties;
-    }
-
-    public void setAdditionalProperties(Map<String, String> additionalProperties) {
-        this.additionalProperties = additionalProperties;
-    }
-
-    public List<String> getHeaderWithAdditionalFields() {
-        List<String> headerWithAdditionalFields = new ArrayList<>();
-        headerWithAdditionalFields.addAll(header);
-
-        for (String field : additionalProperties.keySet()) {
-            if (!headerWithAdditionalFields.contains(field)) {
-                headerWithAdditionalFields.add(field);
-            }
-        }
-        return headerWithAdditionalFields;
-    }
-
-    public List<String> getHeader() {
-        return header;
-    }
-
-    public void initHeader() {
-        header.add("Hugo_Symbol");
-        header.add("Entrez_Gene_Id");
-        header.add("Center");
-        header.add("NCBI_Build");
-        header.add("Chromosome");
-        header.add("Start_Position");
-        header.add("End_Position");
-        header.add("Strand");
-        header.add("Variant_Classification");
-        header.add("Variant_Type");
-        header.add("Reference_Allele");
-        header.add("Tumor_Seq_Allele1");
-        header.add("Tumor_Seq_Allele2");
-        header.add("dbSNP_RS");
-        header.add("dbSNP_Val_Status");
-        header.add("Tumor_Sample_Barcode");
-        header.add("Matched_Norm_Sample_Barcode");
-        header.add("Match_Norm_Seq_Allele1");
-        header.add("Match_Norm_Seq_Allele2");
-        header.add("Tumor_Validation_Allele1");
-        header.add("Tumor_Validation_Allele2");
-        header.add("Match_Norm_Validation_Allele1");
-        header.add("Match_Norm_Validation_Allele2");
-        header.add("Verification_Status");
-        header.add("Validation_Status");
-        header.add("Mutation_Status");
-        header.add("Sequencing_Phase");
-        header.add("Sequence_Source");
-        header.add("Validation_Method");
-        header.add("Score");
-        header.add("BAM_File");
-        header.add("Sequencer");
-        header.add("t_ref_count");
-        header.add("t_alt_count");
-        header.add("n_ref_count");
-        header.add("n_alt_count");
-    }
 }

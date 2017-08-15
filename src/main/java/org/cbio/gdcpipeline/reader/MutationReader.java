@@ -4,9 +4,11 @@ import org.apache.commons.collections.map.MultiKeyMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.tomcat.util.buf.StringUtils;
+import org.cbio.gdcpipeline.model.cbio.AnnotatedRecord;
 import org.cbio.gdcpipeline.model.cbio.MutationRecord;
 import org.cbio.gdcpipeline.util.CommonDataUtil;
 import org.cbio.gdcpipeline.util.MutationDataFileUtils;
+import org.cbioportal.annotator.Annotator;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.ItemStreamReader;
@@ -15,11 +17,14 @@ import org.springframework.batch.item.file.mapping.DefaultLineMapper;
 import org.springframework.batch.item.file.mapping.FieldSetMapper;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.batch.item.file.transform.FieldSet;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
+import org.springframework.web.client.HttpServerErrorException;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -38,6 +43,9 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
 
     @Value("#{jobParameters[separate_maf]}")
     private String separate_maf;
+
+    @Autowired
+    private Annotator annotator;
 
     private List<MutationRecord> mafRecords = new ArrayList<>();
     private static Log LOG = LogFactory.getLog(MutationReader.class);
@@ -142,19 +150,19 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
     }
 
     private boolean identicalVariant(MutationRecord record, MutationRecord newRecord) {
-        return record.getTumor_Sample_Barcode().equals(newRecord.getTumor_Sample_Barcode()) &&
-                record.getChromosome().equals(newRecord.getChromosome()) &&
-                record.getStart_Position().equals(newRecord.getStart_Position()) &&
-                record.getEnd_Position().equals(newRecord.getEnd_Position()) &&
-                record.getStrand().equals(newRecord.getStrand()) &&
-                record.getReference_Allele().equals(newRecord.getReference_Allele()) &&( sameTumourSequence(record,newRecord));
+        return record.getTUMOR_SAMPLE_BARCODE().equals(newRecord.getTUMOR_SAMPLE_BARCODE()) &&
+                record.getCHROMOSOME().equals(newRecord.getCHROMOSOME()) &&
+                record.getSTART_POSITION().equals(newRecord.getSTART_POSITION()) &&
+                record.getEND_POSITION().equals(newRecord.getEND_POSITION()) &&
+                record.getSTRAND().equals(newRecord.getSTRAND()) &&
+                record.getREFERENCE_ALLELE().equals(newRecord.getREFERENCE_ALLELE()) &&( sameTumourSequence(record,newRecord));
     }
 
     private boolean sameTumourSequence(MutationRecord record,MutationRecord newRecord) {
-        if (!(record.getTumor_Seq_Allele1().equals(record.getReference_Allele()) || record.getTumor_Seq_Allele1().isEmpty() || CommonDataUtil.isIgnore(record.getTumor_Seq_Allele1()))) {
-            return record.getTumor_Seq_Allele1().equals(newRecord.getTumor_Seq_Allele1());
+        if (!(record.getTUMOR_SEQ_ALLELE1().equals(record.getREFERENCE_ALLELE()) || record.getTUMOR_SEQ_ALLELE1().isEmpty() || CommonDataUtil.isIgnore(record.getTUMOR_SEQ_ALLELE1()))) {
+            return record.getTUMOR_SEQ_ALLELE1().equals(newRecord.getTUMOR_SEQ_ALLELE1());
         }
-        return record.getTumor_Seq_Allele2().equals(newRecord.getTumor_Seq_Allele2());
+        return record.getTUMOR_SEQ_ALLELE2().equals(newRecord.getTUMOR_SEQ_ALLELE2());
     }
 
     private FieldSetMapper<MutationRecord> mutationFieldSetMapper() {
@@ -162,7 +170,8 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
             MutationRecord record = new MutationRecord();
             for (String header : record.getHeader()) {
                 try {
-                    record.getClass().getMethod("set" + header, String.class).invoke(record, fs.readString(header));
+                    String a = fs.readString(header);
+                    record.getClass().getMethod("set" + header.toUpperCase(), String.class).invoke(record, fs.readString(header));
                 } catch (Exception e) {
                     if (LOG.isDebugEnabled()) {
                         LOG.error(" Error in setting record for :" + header);
@@ -170,7 +179,29 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
                     e.printStackTrace();
                 }
             }
-            return record;
+            //annotate
+            org.cbioportal.models.AnnotatedRecord ar = null;
+            AnnotatedRecord annotatedRecord = new AnnotatedRecord();
+            try {
+                ar = annotator.annotateRecord(record, false, "uniprot", true);
+            } catch (HttpServerErrorException e) {
+                if (LOG.isWarnEnabled()) {
+                    LOG.warn("Failed to annotate a record from json! Sample: " + record.getTUMOR_SAMPLE_BARCODE() + " Variant: " + record.getCHROMOSOME() + ":" + record.getSTART_POSITION() + record.getREFERENCE_ALLELE() + ">" + record.getTUMOR_SEQ_ALLELE2());
+                }
+            }
+
+            for(String header : ar.getHeader()){
+                try {
+                    annotatedRecord.getClass().getMethod("set"+header.toUpperCase(),String.class).invoke(annotatedRecord,ar.getClass().getMethod("get"+header.toUpperCase()).invoke(ar));
+                } catch (NoSuchMethodException e) {
+                    e.printStackTrace();
+                } catch (InvocationTargetException e) {
+                    e.printStackTrace();
+                } catch (IllegalAccessException e) {
+                    e.printStackTrace();
+                }
+            }
+            return (MutationRecord)annotatedRecord;
         };
     }
 

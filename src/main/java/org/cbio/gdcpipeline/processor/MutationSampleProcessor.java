@@ -12,8 +12,8 @@ import java.util.regex.Pattern;
 public class MutationSampleProcessor implements ItemProcessor<MutationRecord,MutationRecord> {
     @Override
     public MutationRecord process(MutationRecord mutationRecord) throws Exception {
-        mutationRecord.setTumor_Sample_Barcode(stripSample(mutationRecord.getTumor_Sample_Barcode()));
-        mutationRecord.setMatched_Norm_Sample_Barcode(stripSample(mutationRecord.getMatched_Norm_Sample_Barcode()));
+        mutationRecord.setTUMOR_SAMPLE_BARCODE(stripSample(mutationRecord.getTUMOR_SAMPLE_BARCODE()));
+        mutationRecord.setMATCHED_NORM_SAMPLE_BARCODE(stripSample(mutationRecord.getMATCHED_NORM_SAMPLE_BARCODE()));
         return mutationRecord;
     }
 
