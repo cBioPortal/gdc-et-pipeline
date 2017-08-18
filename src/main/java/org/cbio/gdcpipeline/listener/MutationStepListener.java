@@ -1,27 +1,20 @@
 package org.cbio.gdcpipeline.listener;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.tomcat.util.buf.StringUtils;
 import org.cbio.gdcpipeline.model.rest.response.GdcFileMetadata;
 import org.cbio.gdcpipeline.util.CommonDataUtil;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.StepExecution;
 import org.springframework.batch.core.StepExecutionListener;
-import org.springframework.batch.item.ItemStreamException;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * @author Dixit Patel
  **/
 public class MutationStepListener implements StepExecutionListener {
-    private static Log LOG = LogFactory.getLog(MutationStepListener.class);
-
     @Value("${mutation.data.file.prefix}")
     private String MUTATION_DATA_FILE_PREFIX;
 
@@ -30,9 +23,6 @@ public class MutationStepListener implements StepExecutionListener {
 
     @Value("#{jobParameters[sourceDirectory]}")
     private String sourceDir;
-
-    @Value("#{jobParameters[outputDirectory]}")
-    private String outputDir;
 
     @Value("#{jobExecutionContext[gdcFileMetadatas]}")
     private List<GdcFileMetadata> gdcFileMetadatas;
@@ -92,16 +82,19 @@ public class MutationStepListener implements StepExecutionListener {
                     return new ExitStatus("CONTINUE");
                 }
             }
+            //delete temp directory
+            CommonDataUtil.deleteTempDir();
         }
         return ExitStatus.COMPLETED;
     }
 
     public List<File> getMutationFileList() {
         List<File> fileList = CommonDataUtil.getFileList(gdcFileMetadatas, CommonDataUtil.GDC_TYPE.MUTATION, sourceDir);
-        List<File> mutationFileList = new ArrayList<>();
-        for (File file : fileList) {
-            File maf =new File(sourceDir,file.getName().replace(".gz", ""));
-            mutationFileList.add(maf);
+        List<File> mutationFileList = null;
+        try {
+            mutationFileList = CommonDataUtil.extractCompressedFiles(fileList);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
         return mutationFileList;
     }

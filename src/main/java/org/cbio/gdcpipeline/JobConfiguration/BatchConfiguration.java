@@ -141,6 +141,7 @@ public class BatchConfiguration {
     public Flow clinicalFileTypeDeciderFlow() {
         return new FlowBuilder<Flow>("clinicalFileTypeDeciderFlow")
                 .start(clinicalFileTypeDecider())
+                .on(CommonDataUtil.GDC_DATAFORMAT.BCR_XML.toString()).to(clinicalXmlDataFlow())
                 .on("FAIL").fail()
                 .build();
     }
@@ -150,10 +151,7 @@ public class BatchConfiguration {
         return new FlowBuilder<Flow>("gdcPipelineFlow")
                 .start(clinicalFileTypeDecider())
                 .on(CommonDataUtil.GDC_DATAFORMAT.BCR_XML.toString()).to(clinicalXmlDataFlow())
-                .from(clinicalFileTypeDecider()).on("FAIL").fail()
-                .next(mutationDataStep)
-                .from(mutationDataStep).on("CONTINUE").to(mutationDataStep)
-                .next(mutationMetaDataStep).end();
+                .next(mutationDataFlow()).build();
     }
 
     @Bean
