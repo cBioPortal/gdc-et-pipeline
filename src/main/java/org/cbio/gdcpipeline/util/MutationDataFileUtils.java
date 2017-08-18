@@ -20,7 +20,6 @@ public class MutationDataFileUtils {
     public static MultiKeyMap loadDataFileMetadata(File dataFile) throws IOException {
         String[] columnNames;
         int metadataCount = 0;
-
         // get the file header and header count
         try (FileReader reader = new FileReader(dataFile)) {
             BufferedReader buff = new BufferedReader(reader);
