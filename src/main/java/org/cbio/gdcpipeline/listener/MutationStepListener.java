@@ -81,16 +81,19 @@ public class MutationStepListener implements StepExecutionListener {
                     return new ExitStatus("CONTINUE");
                 }
             }
+            //delete temp directory
+            CommonDataUtil.deleteTempDir();
         }
         return ExitStatus.COMPLETED;
     }
 
     public List<File> getMutationFileList() {
         List<File> fileList = CommonDataUtil.getFileList(gdcFileMetadatas, CommonDataUtil.GDC_TYPE.MUTATION, sourceDir);
-        List<File> mutationFileList = new ArrayList<>();
-        for (File file : fileList) {
-            File maf =new File(sourceDir,file.getName().replace(".gz", ""));
-            mutationFileList.add(maf);
+        List<File> mutationFileList = null;
+        try {
+            mutationFileList = CommonDataUtil.extractCompressedFiles(fileList);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
         return mutationFileList;
     }
