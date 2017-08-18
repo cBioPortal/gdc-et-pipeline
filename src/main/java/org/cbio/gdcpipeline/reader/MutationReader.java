@@ -65,11 +65,15 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException {
         List<File> maf_files = (List<File>) executionContext.get("mafToProcess");
-        for (File file : maf_files) {
-            if (LOG.isInfoEnabled()) {
-                LOG.info("Processing MAF File : " + file.getAbsolutePath());
+        if (maf_files == null || maf_files.isEmpty()) {
+            throw new ItemStreamException("No MAF files to process");
+        } else {
+            for (File file : maf_files) {
+                if (LOG.isInfoEnabled()) {
+                    LOG.info("Processing MAF File : " + file.getAbsolutePath());
+                }
+                readFile(file);
             }
-            readFile(file);
         }
         if (separate_mafs.equalsIgnoreCase("true")) {
             File output_file = new File(outputDir, MUTATION_DATA_FILE_PREFIX + maf_files.get(0).getName());
@@ -82,9 +86,7 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
             MutationRecord record = entry.getKey();
             Set<String> caller = entry.getValue();
             List<String> list = caller.stream().collect(Collectors.toList());
-            Map<String, String> additionalProperties = new HashMap<>();
-            additionalProperties.put(ADD_MAF_COLUMN_NAME, StringUtils.join(list, '|'));
-            record.setAdditionalProperties(additionalProperties);
+            record.setCaller(StringUtils.join(list, '|'));
             mafRecords.add(record);
         }
     }
