@@ -20,18 +20,18 @@ public class GDCPipelineApplication {
 	private static Log LOG = LogFactory.getLog(GDCPipelineApplication.class);
 	private final static String GDC_JOB = "gdcJob";
 	private final static String DEFAULT_DATATYPES = "ALL";
-	private final static String DEFAULT_FILTER_SAMPLE = "true";
+	private final static String DEFAULT_FILTER_NORMAL_SAMPLE = "true";
 	private final static String DEFAULT_SEPARATE_MAF_FILES = "false";
 
     private static Options getOptions(String []input){
 		Options options = new Options();
         options.addRequiredOption("s","source",true,"source directory for files");
 		options.addRequiredOption("o","output",true,"output directory for files");
-		options.addRequiredOption("cancer_study_id", "cancer_study_id", true, "Cancer Study Id");
-		options.addRequiredOption("manifest_file","manifest_file",true,"Manifest file path");
-        options.addOption("filter_sample", "filter_sample", true, "True or False. Flag to filter Normal samples. Default is True ");
-		options.addOption("datatypes", "datatypes", true, "Datatypes to run. Default is All");
-        options.addOption("separate_maf", "separate_maf", true, "True or False. Process and generate MAF files individually apart from merging. Default is False");
+		options.addRequiredOption("c", "cancer_study_id", true, "Cancer Study Id");
+		options.addRequiredOption("m","manifest_file",true,"Manifest file path");
+        options.addOption("f", "filter_normal_sample", true, "True or False. Flag to filter normal samples. Default is True ");
+		options.addOption("d", "datatypes", true, "Datatypes to run. Default is All");
+        options.addOption("s", "separate_maf", true, "True or False. Process and generate MAF files individually apart from merging. Default is False");
         options.addOption("h", "help", true, "shows this help document and quits.");
 		return options;
 	}
@@ -45,7 +45,7 @@ public class GDCPipelineApplication {
 		System.exit(exitStatus);
 	}
 
-	private static void launchJob(String[] args, String sourceDirectory, String outputDirectory, String cancer_study_id, String manifest_file, String filter_sample, String datatypes, String separate_maf) throws Exception {
+	private static void launchJob(String[] args, String sourceDirectory, String outputDirectory, String cancer_study_id, String manifest_file, String filter_normal_sample, String datatypes, String separate_maf) throws Exception {
 		SpringApplication app = new SpringApplication(GDCPipelineApplication.class);
 		ConfigurableApplicationContext ctx= app.run(args);
 		Job gdcJob = ctx.getBean(GDC_JOB, Job.class);
@@ -55,7 +55,7 @@ public class GDCPipelineApplication {
 				.addString("outputDirectory", outputDirectory)
                 .addString("cancer_study_id", cancer_study_id)
                 .addString("manifest_file",manifest_file)
-				.addString("filter_sample", filter_sample)
+				.addString("filter_normal_sample", filter_normal_sample)
 				.addString("datatypes", datatypes)
                 .addString("separate_maf", separate_maf)
                 .toJobParameters();
@@ -73,11 +73,11 @@ public class GDCPipelineApplication {
 		if (cli.hasOption("datatypes")) {
 			datatypes = cli.getOptionValue("datatypes");
 		}
-		String filter_sample = DEFAULT_FILTER_SAMPLE;
-		if (cli.hasOption("filter_sample")) {
-			if (cli.getOptionValue("filter_sample").toLowerCase().equals("false")) {
-				filter_sample = "false";
-			} else if (!cli.getOptionValue("filter_sample").toLowerCase().equals("true")) {
+		String filter_normal_sample = DEFAULT_FILTER_NORMAL_SAMPLE;
+		if (cli.hasOption("filter_normal_sample")) {
+			if (cli.getOptionValue("filter_normal_sample").toLowerCase().equals("false")) {
+                filter_normal_sample = "false";
+			} else if (!cli.getOptionValue("filter_normal_sample").toLowerCase().equals("true")) {
 				GDCPipelineApplication.help(options, 0, "Filter Option must either be True or False");
 			}
 		}
@@ -89,6 +89,6 @@ public class GDCPipelineApplication {
                 GDCPipelineApplication.help(options, 0, "MAF File Option must either be True or False");
             }
         }
-		launchJob(args, cli.getOptionValue("source"), cli.getOptionValue("output"), cli.getOptionValue("cancer_study_id"), cli.getOptionValue("manifest_file"), filter_sample, datatypes, separate_maf);
+		launchJob(args, cli.getOptionValue("source"), cli.getOptionValue("output"), cli.getOptionValue("cancer_study_id"), cli.getOptionValue("manifest_file"), filter_normal_sample, datatypes, separate_maf);
 	}
 }

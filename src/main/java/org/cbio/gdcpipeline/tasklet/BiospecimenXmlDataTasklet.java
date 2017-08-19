@@ -5,7 +5,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.cbio.gdcpipeline.model.gdc.nci.tcga.bcr.xml.biospecimen._2.Sample;
 import org.cbio.gdcpipeline.model.gdc.nci.tcga.bcr.xml.biospecimen._2.TcgaBcr;
-import org.cbio.gdcpipeline.model.rest.response.GdcFileMetadata;
+import org.cbio.gdcpipeline.model.rest.response.Hits;
 import org.cbio.gdcpipeline.util.CommonDataUtil;
 import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;
@@ -32,7 +32,7 @@ public class BiospecimenXmlDataTasklet implements Tasklet {
     private String sourceDir;
 
     @Value("#{jobExecutionContext[gdcFileMetadatas]}")
-    private List<GdcFileMetadata> gdcFileMetadatas;
+    private List<Hits> gdcFileMetadatas;
 
     private Map<String, List<String>> barcodeToSamplesMap = new HashMap<>();
 
@@ -82,21 +82,17 @@ public class BiospecimenXmlDataTasklet implements Tasklet {
 
     private List<File> getBiospecimenFileList() {
         List<File> biospecimenFiles = new ArrayList<>();
-        List<String> filenames = new ArrayList<>();
         if (!gdcFileMetadatas.isEmpty()) {
-            for (GdcFileMetadata data : gdcFileMetadatas) {
+            for (Hits data : gdcFileMetadatas) {
                 if (data.getType().equals(CommonDataUtil.GDC_TYPE.BIOSPECIMEN.toString())) {
-                    filenames.add(data.getFile_name());
-                }
-            }
-        }
-        for (String file : filenames) {
-            File xmlFile = new File(sourceDir, file);
-            if (xmlFile.exists()) {
-                biospecimenFiles.add(xmlFile);
-            } else {
-                if (LOG.isInfoEnabled()) {
-                    LOG.info("Biospecimen File : " + xmlFile.getAbsolutePath() + " not found.\nSkipping File");
+                    File file = new File(sourceDir, data.getFile_name());
+                    if (file.exists()) {
+                        biospecimenFiles.add(file);
+                    } else {
+                        if (LOG.isInfoEnabled()) {
+                            LOG.info("Biospecimen File : " + file.getAbsolutePath() + " not found.\nSkipping File");
+                        }
+                    }
                 }
             }
         }

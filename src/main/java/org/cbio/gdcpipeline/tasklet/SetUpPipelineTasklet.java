@@ -43,8 +43,7 @@ public class SetUpPipelineTasklet implements Tasklet {
         validateCancerStudy();
         createOutputDirectory();
         validateSourceDirectory();
-        //TODO
-       // extractCompressedFiles();
+        extractCompressedFiles();
         if (LOG.isInfoEnabled()) {
             LOG.info(" ######### Pipeline Setup Completed #########");
         }
@@ -120,19 +119,17 @@ public class SetUpPipelineTasklet implements Tasklet {
             LOG.info("######### Extracting Compressed Files #########");
         }
         File temp_dir = createTempDirectory();
-        List<File> filesToExtract = getFilesToExtract();
-        if (!filesToExtract.isEmpty()) {
-            for (File extractFile : filesToExtract) {
+
+
+        File source = new File(sourceDir);
+        for (File extractFile : source.listFiles()) {
+            if (extractFile.isFile() && extractFile.getName().endsWith(".gz")) {
                 File tmp_file;
                 try {
                     tmp_file = File.createTempFile(extractFile.getName(), ".tmp", temp_dir);
                 } catch (IOException e) {
                     e.printStackTrace();
-                    if (LOG.isErrorEnabled()) {
-                        LOG.error("Error creating temp file in : " + temp_dir.getAbsolutePath() + "\nSkipping File");
-                    }
-                    //TODO Skip ? Terminate ?
-                    continue;
+                    throw new Exception("Error creating temp file in : " + temp_dir.getAbsolutePath() + "\nSkipping File");
                 }
                 try {
                     FileInputStream fis = new FileInputStream(extractFile);
@@ -153,8 +150,8 @@ public class SetUpPipelineTasklet implements Tasklet {
                     throw new Exception("Error While decompressing files");
                 }
             }
-            deleteTempDir(temp_dir);
         }
+        deleteTempDir(temp_dir);
     }
 
     private List<File> getFilesToExtract() {

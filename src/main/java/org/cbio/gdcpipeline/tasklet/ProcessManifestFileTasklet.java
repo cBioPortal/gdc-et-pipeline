@@ -1,13 +1,11 @@
 package org.cbio.gdcpipeline.tasklet;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.cbio.gdcpipeline.model.ManifestFileData;
 import org.cbio.gdcpipeline.model.rest.response.GdcApiResponse;
-import org.cbio.gdcpipeline.model.rest.response.GdcFileMetadata;
 import org.cbio.gdcpipeline.model.rest.response.Hits;
 import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;
@@ -29,6 +27,7 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * @author Dixit Patel
@@ -46,14 +45,13 @@ public class ProcessManifestFileTasklet implements Tasklet {
     private static Log LOG = LogFactory.getLog(ProcessManifestFileTasklet.class);
     private List<ManifestFileData> manifestFileList = new ArrayList<>();
     private RestTemplate restTemplate = new RestTemplate();
-    private List<GdcFileMetadata> gdcFileMetadatas = new ArrayList<>();
+    private List<Hits> gdcFileMetadatas = new ArrayList<>();
 
     @Override
     public RepeatStatus execute(StepContribution stepContribution, ChunkContext chunkContext) throws Exception {
         FlatFileItemReader<ManifestFileData> reader = new FlatFileItemReader<>();
         DelimitedLineTokenizer tokenizer = new DelimitedLineTokenizer(DelimitedLineTokenizer.DELIMITER_TAB);
-        try (FileReader r = new FileReader(manifest_file)) {
-            BufferedReader buff = new BufferedReader(r);
+        try (BufferedReader buff = new BufferedReader(new FileReader(manifest_file))) {
             // header line
             String header = buff.readLine();
             tokenizer.setNames(header.split(DelimitedLineTokenizer.DELIMITER_TAB));
@@ -65,15 +63,14 @@ public class ProcessManifestFileTasklet implements Tasklet {
         reader.setLineMapper(lineMapper);
         reader.setLinesToSkip(1);
         reader.open(new ExecutionContext());
+        ManifestFileData record = null;
         try {
-            ManifestFileData record = reader.read();
-            while (record != null) {
+            while ((record = reader.read()) != null) {
                 manifestFileList.add(record);
-                record = reader.read();
             }
         } catch (Exception e) {
             e.printStackTrace();
-            throw new ItemStreamException("Error reading manifest record");
+            throw new ItemStreamException("Error reading manifest record : "+record.toString());
         }
         reader.close();
         String payload = buildJsonRequest();
@@ -158,16 +155,7 @@ public class ProcessManifestFileTasklet implements Tasklet {
                 }
                 throw new Exception(" Last API Request returned 0 results ");
             }
-
-            for (Hits hit : res.getData().getHits()) {
-                GdcFileMetadata g = new GdcFileMetadata();
-                g.setFile_id(hit.getFile_id());
-                g.setFile_name(hit.getFile_name());
-                g.setCases(hit.getCases());
-                g.setData_format(hit.getData_format());
-                g.setType(hit.getType());
-                gdcFileMetadatas.add(g);
-            }
+            gdcFileMetadatas.addAll(res.getData().getHits().stream().collect(Collectors.toList()));
             from = callCount * MAX_RESPONSE_SIZE;
         }
     }
@@ -183,7 +171,7 @@ public class ProcessManifestFileTasklet implements Tasklet {
         httpHeaders.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> entity = new HttpEntity<String>(payload.toString(), httpHeaders);
 
-        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
+        ResponseEntity<GdcApiResponse> response = restTemplate.exchange(url, HttpMethod.POST, entity, GdcApiResponse.class);
         if (response.getStatusCode() != HttpStatus.OK) {
             if (LOG.isErrorEnabled()) {
                 LOG.error("Error calling GDC API. Response code is :" + response.getStatusCodeValue()
@@ -192,26 +180,7 @@ public class ProcessManifestFileTasklet implements Tasklet {
             throw new Exception();
 
         }
-        return parseJsonResponse(response);
-    }
-
-    /* Response Format
-    {
-        "data": {
-            "hits": [
-               { "file_name": "XYZ.vcf.gz"
-                 "cases": [{"case_id": "ABC123"}]
-               },
-               { .... }
-            ]
-            "pagination":{...}
-        }
-    }
-     */
-
-    protected GdcApiResponse parseJsonResponse(ResponseEntity<String> response) {
-        Gson g = new Gson();
-        return g.fromJson(response.getBody(), GdcApiResponse.class);
+        return response.getBody();
     }
 }
 

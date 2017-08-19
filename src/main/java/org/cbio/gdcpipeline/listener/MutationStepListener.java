@@ -2,19 +2,16 @@ package org.cbio.gdcpipeline.listener;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.tomcat.util.buf.StringUtils;
-import org.cbio.gdcpipeline.model.rest.response.GdcFileMetadata;
+import org.cbio.gdcpipeline.model.rest.response.Hits;
 import org.cbio.gdcpipeline.util.CommonDataUtil;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.StepExecution;
 import org.springframework.batch.core.StepExecutionListener;
-import org.springframework.batch.item.ItemStreamException;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * @author Dixit Patel
@@ -35,7 +32,7 @@ public class MutationStepListener implements StepExecutionListener {
     private String outputDir;
 
     @Value("#{jobExecutionContext[gdcFileMetadatas]}")
-    private List<GdcFileMetadata> gdcFileMetadatas;
+    private List<Hits> gdcFileMetadatas;
 
     @Value("#{jobParameters[separate_maf]}")
     private String separate_maf;

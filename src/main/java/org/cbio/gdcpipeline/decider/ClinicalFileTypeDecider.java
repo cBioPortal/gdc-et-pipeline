@@ -2,7 +2,7 @@ package org.cbio.gdcpipeline.decider;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.cbio.gdcpipeline.model.rest.response.GdcFileMetadata;
+import org.cbio.gdcpipeline.model.rest.response.Hits;
 import org.cbio.gdcpipeline.util.CommonDataUtil;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.StepExecution;
@@ -19,9 +19,9 @@ public class ClinicalFileTypeDecider implements JobExecutionDecider {
 
     @Override
     public FlowExecutionStatus decide(JobExecution jobExecution, StepExecution stepExecution) {
-        List<GdcFileMetadata> gdcFileMetadatas = (List<GdcFileMetadata>) jobExecution.getExecutionContext().get("gdcFileMetadatas");
+        List<Hits> gdcFileMetadatas = (List<Hits>) jobExecution.getExecutionContext().get("gdcFileMetadatas");
         String data_format = getClinicalFileFormat(gdcFileMetadatas);
-        if (!data_format.isEmpty()) {
+        if ((data_format!=null) && !data_format.isEmpty()) {
             if (data_format.equals(CommonDataUtil.GDC_DATAFORMAT.BCR_XML.toString())) {
                 if (LOG.isInfoEnabled()) {
                     LOG.info(" Found Clinical files of XML type");
@@ -35,12 +35,12 @@ public class ClinicalFileTypeDecider implements JobExecutionDecider {
         return new FlowExecutionStatus("FAIL");
     }
 
-    private String getClinicalFileFormat(List<GdcFileMetadata> gdcFileMetadatas) {
-        for (GdcFileMetadata data : gdcFileMetadatas) {
+    private String getClinicalFileFormat(List<Hits> gdcFileMetadatas) {
+        for (Hits data : gdcFileMetadatas) {
             if (data.getType().equals(CommonDataUtil.GDC_TYPE.CLINICAL.toString())) {
                 return data.getData_format();
             }
         }
-        return "";
+        return null;
     }
 }
