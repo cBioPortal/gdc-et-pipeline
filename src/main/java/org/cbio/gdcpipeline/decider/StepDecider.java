@@ -10,7 +10,7 @@ import org.springframework.batch.core.job.flow.JobExecutionDecider;
  */
 public class StepDecider implements JobExecutionDecider {
     public enum STEP {
-        ALL, CLINICAL
+        ALL, CLINICAL, MUTATION
     }
 
     @Override
@@ -18,6 +18,9 @@ public class StepDecider implements JobExecutionDecider {
         String stepToRun = jobExecution.getJobParameters().getString("datatypes");
         if (stepToRun.contains(STEP.CLINICAL.toString())) {
             return new FlowExecutionStatus(STEP.CLINICAL.toString());
+        }
+        if (stepToRun.contains(STEP.MUTATION.toString())) {
+            return new FlowExecutionStatus(STEP.MUTATION.toString());
         }
         return new FlowExecutionStatus(STEP.ALL.toString());
     }

@@ -151,7 +151,8 @@ public class BatchConfiguration {
         return new FlowBuilder<Flow>("gdcAllDatatypesFlow")
                 .start(clinicalFileTypeDecider())
                 .on(CommonDataUtil.GDC_DATAFORMAT.BCR_XML.toString()).to(clinicalXmlDataFlow())
-                .next(mutationDataFlow()).build();
+                .next(mutationDataFlow())
+                .build();
     }
 
     @Bean
