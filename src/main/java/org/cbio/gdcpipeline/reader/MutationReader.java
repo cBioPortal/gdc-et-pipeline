@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.util.stream.Collectors;
-
 import static org.cbioportal.models.MutationRecord.hasMissingKeys;
 
 /**
@@ -153,7 +152,7 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
             MutationRecord record = new MutationRecord();
             for (String header : record.getHeader()) {
                 try {
-                    record.getClass().getMethod("set" + header, String.class).invoke(record, fs.readString(header));
+                    record.getClass().getMethod("set" + header.toUpperCase(), String.class).invoke(record, fs.readString(header));
                 } catch (Exception e) {
                     if (LOG.isDebugEnabled()) {
                         LOG.error(" Error in setting record for :" + header);
@@ -162,25 +161,12 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
                 }
             }
             //annotate
-            org.cbioportal.models.AnnotatedRecord ar = null;
             AnnotatedRecord annotatedRecord = new AnnotatedRecord();
             try {
-                ar = annotator.annotateRecord(record, false, "uniprot", true);
+                annotatedRecord = annotator.annotateRecord(record, false, "uniprot", true);
             } catch (HttpServerErrorException e) {
                 if (LOG.isWarnEnabled()) {
                     LOG.warn("Failed to annotate a record from json! Sample: " + record.getTUMOR_SAMPLE_BARCODE() + " Variant: " + record.getCHROMOSOME() + ":" + record.getSTART_POSITION() + record.getREFERENCE_ALLELE() + ">" + record.getTUMOR_SEQ_ALLELE2());
-                }
-            }
-
-            for(String header : ar.getHeader()){
-                try {
-                    annotatedRecord.getClass().getMethod("set"+header.toUpperCase(),String.class).invoke(annotatedRecord,ar.getClass().getMethod("get"+header.toUpperCase()).invoke(ar));
-                } catch (NoSuchMethodException e) {
-                    e.printStackTrace();
-                } catch (InvocationTargetException e) {
-                    e.printStackTrace();
-                } catch (IllegalAccessException e) {
-                    e.printStackTrace();
                 }
             }
             return (MutationRecord)annotatedRecord;

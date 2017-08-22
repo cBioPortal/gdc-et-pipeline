@@ -52,7 +52,7 @@ public class MutationWriter implements ItemStreamWriter<MutationRecord> {
         return new FlatFileHeaderCallback() {
             @Override
             public void writeHeader(Writer writer) throws IOException {
-                List<String> headers = data.getHeader();
+                List<String> headers = data.getHeaderWithAdditionalFields();
                 StringBuilder sb = new StringBuilder();
                 sb.append(StringUtils.join(headers, '\t'));
                 writer.write(sb.toString());
