@@ -4,11 +4,11 @@ import org.apache.commons.collections.map.MultiKeyMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.tomcat.util.buf.StringUtils;
-import org.cbio.gdcpipeline.model.cbio.AnnotatedRecord;
-import org.cbio.gdcpipeline.model.cbio.MutationRecord;
 import org.cbio.gdcpipeline.util.CommonDataUtil;
 import org.cbio.gdcpipeline.util.MutationDataFileUtils;
 import org.cbioportal.annotator.Annotator;
+import org.cbioportal.models.AnnotatedRecord;
+import org.cbioportal.models.MutationRecord;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.ItemStreamReader;
@@ -24,7 +24,6 @@ import org.springframework.web.client.HttpServerErrorException;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -88,7 +87,9 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
                 MutationRecord record = entry.getKey();
                 Set<String> caller = entry.getValue();
                 List<String> list = caller.stream().collect(Collectors.toList());
-                record.setCaller(StringUtils.join(list, '|'));
+                Map<String,String> addProp = new HashMap<>();
+                addProp.put("Caller",StringUtils.join(list, '|'));
+                record.setAdditionalProperties(addProp);
                 mafRecords.add(record);
             }
         }
@@ -170,7 +171,6 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
             MutationRecord record = new MutationRecord();
             for (String header : record.getHeader()) {
                 try {
-                    String a = fs.readString(header);
                     record.getClass().getMethod("set" + header.toUpperCase(), String.class).invoke(record, fs.readString(header));
                 } catch (Exception e) {
                     if (LOG.isDebugEnabled()) {
@@ -180,25 +180,12 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
                 }
             }
             //annotate
-            org.cbioportal.models.AnnotatedRecord ar = null;
             AnnotatedRecord annotatedRecord = new AnnotatedRecord();
             try {
-                ar = annotator.annotateRecord(record, false, "uniprot", true);
+                annotatedRecord = annotator.annotateRecord(record, false, "uniprot", true);
             } catch (HttpServerErrorException e) {
                 if (LOG.isWarnEnabled()) {
                     LOG.warn("Failed to annotate a record from json! Sample: " + record.getTUMOR_SAMPLE_BARCODE() + " Variant: " + record.getCHROMOSOME() + ":" + record.getSTART_POSITION() + record.getREFERENCE_ALLELE() + ">" + record.getTUMOR_SEQ_ALLELE2());
-                }
-            }
-
-            for(String header : ar.getHeader()){
-                try {
-                    annotatedRecord.getClass().getMethod("set"+header.toUpperCase(),String.class).invoke(annotatedRecord,ar.getClass().getMethod("get"+header.toUpperCase()).invoke(ar));
-                } catch (NoSuchMethodException e) {
-                    e.printStackTrace();
-                } catch (InvocationTargetException e) {
-                    e.printStackTrace();
-                } catch (IllegalAccessException e) {
-                    e.printStackTrace();
                 }
             }
             return (MutationRecord)annotatedRecord;
