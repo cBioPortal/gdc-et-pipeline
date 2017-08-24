@@ -3,6 +3,8 @@ package org.cbio.gdcpipeline.processor;
 import org.cbioportal.models.MutationRecord;
 import org.springframework.batch.item.ItemProcessor;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -11,12 +13,15 @@ import java.util.regex.Pattern;
  */
 public class MutationSampleProcessor implements ItemProcessor<MutationRecord,MutationRecord> {
     private static Pattern numberPattern = Pattern.compile("(\\d+)");
+    private static Map<String,String> validChrValues = null;
+
+
 
     @Override
     public MutationRecord process(MutationRecord mutationRecord) throws Exception {
         mutationRecord.setTUMOR_SAMPLE_BARCODE(stripSample(mutationRecord.getTUMOR_SAMPLE_BARCODE()));
         mutationRecord.setMATCHED_NORM_SAMPLE_BARCODE(stripSample(mutationRecord.getMATCHED_NORM_SAMPLE_BARCODE()));
-        processChromosome(mutationRecord.getCHROMOSOME());
+        normalizeChromosome(mutationRecord.getCHROMOSOME());
         return mutationRecord;
     }
 
@@ -29,22 +34,24 @@ public class MutationSampleProcessor implements ItemProcessor<MutationRecord,Mut
         return record;
     }
 
-    private String processChromosome(String chromosome){
-        Matcher matcher = numberPattern.matcher(chromosome);
-        if(matcher.find()){
-            chromosome = matcher.group(1);
+    private String normalizeChromosome(String chromosome){
+        if (chromosome == null){
+            return null;
         }
-        if(!chromosome.isEmpty()) {
-            int chr = Integer.parseInt(chromosome);
-            if (chr > 0 && chr < 24) {
-                if (chr == 22) chromosome = "X";
-                if (chr == 23) chromosome = "Y";
-            } else {
-                //TODO ?
+        if (validChrValues==null) {
+            validChrValues = new HashMap<String,String>();
+            for (int lc = 1; lc<=24; lc++) {
+                validChrValues.put(Integer.toString(lc),Integer.toString(lc));
+                validChrValues.put("CHR" + Integer.toString(lc),Integer.toString(lc));
             }
-        } else {
-            //TODO ?
+            validChrValues.put("X","23");
+            validChrValues.put("CHRX","23");
+            validChrValues.put("Y","24");
+            validChrValues.put("CHRY","24");
+            validChrValues.put("NA","NA");
+            validChrValues.put("MT","MT"); // mitochondria
         }
-        return chromosome;
+
+        return validChrValues.get(chromosome);
     }
 }
