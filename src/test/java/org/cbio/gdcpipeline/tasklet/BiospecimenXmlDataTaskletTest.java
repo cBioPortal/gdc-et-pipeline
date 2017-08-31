@@ -16,16 +16,10 @@ import org.springframework.web.client.RestTemplate;
 
 import java.io.File;
 import java.io.FileReader;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Properties;
 
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.mock;
-import static org.powermock.api.mockito.PowerMockito.when;
-
 /**
- * Created by Dixit on 26/06/17.
+ * @author Dixit Patel
  */
 
 @PrepareForTest({BiospecimenXmlDataTasklet.class, LogFactory.class})

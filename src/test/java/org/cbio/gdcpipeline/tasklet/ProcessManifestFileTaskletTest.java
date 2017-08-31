@@ -1,6 +1,5 @@
 package org.cbio.gdcpipeline.tasklet;
 
-import com.google.gson.Gson;
 import org.apache.commons.logging.LogFactory;
 import org.cbio.gdcpipeline.model.ManifestFileData;
 import org.junit.Before;
@@ -20,7 +19,6 @@ import org.springframework.web.client.RestTemplate;
 import java.io.File;
 import java.io.FileReader;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
 
@@ -29,7 +27,7 @@ import static org.mockito.Mockito.mock;
 import static org.powermock.api.mockito.PowerMockito.when;
 
 /**
- * Created by Dixit on 26/06/17.
+ * @author Dixit Patel
  */
 
 @PrepareForTest({ProcessManifestFileTasklet.class, LogFactory.class})

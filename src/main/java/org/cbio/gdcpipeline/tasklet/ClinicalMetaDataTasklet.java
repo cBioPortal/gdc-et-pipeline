@@ -1,7 +1,5 @@
 package org.cbio.gdcpipeline.tasklet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.cbio.gdcpipeline.util.MetaFileWriter;
 import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;

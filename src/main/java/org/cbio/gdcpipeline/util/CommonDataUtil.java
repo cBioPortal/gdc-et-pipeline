@@ -1,20 +1,47 @@
 package org.cbio.gdcpipeline.util;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.cbio.gdcpipeline.model.rest.response.Hits;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * @author Dixit Patel
  */
 public class CommonDataUtil {
-    public static final String NORMAL_SAMPLE_SUFFIX= "-10";
+    public static final String NORMAL_SAMPLE_SUFFIX = "-10";
+    public static List<String> missingValueList = initMissingValueList();
+    private static Log LOG = LogFactory.getLog(CommonDataUtil.class);
+
+    private static List<String> initMissingValueList() {
+        List<String> missingValueList = new ArrayList<>();
+        missingValueList.add("NA");
+        missingValueList.add("N/A");
+        missingValueList.add("N/a");
+        missingValueList.add("n/A");
+        missingValueList.add("Unknown");
+        missingValueList.add("not available");
+        return missingValueList;
+    }
+
+    public static boolean hasMissingKeys(String check) {
+        for (String ignore : missingValueList) {
+            if (check.equalsIgnoreCase(ignore)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     public enum CLINICAL_TYPE{PATIENT,SAMPLE}
     public enum CLINICAL_OS_STATUS {LIVING, DECEASED}
 
-    public enum STEP {
-        ALL, CLINICAL
-    }
-
-    public enum GDC_DATAFORMAT{
-        BCR_XML("BCR XML");
+    public enum GDC_DATAFORMAT {
+        BCR_XML("BCR XML"),
+        MAF("MAF");
 
         private final String format;
         private GDC_DATAFORMAT(String format){
@@ -25,12 +52,12 @@ public class CommonDataUtil {
         public String toString(){
             return this.format;
         }
-
     }
 
     public enum GDC_TYPE{
         BIOSPECIMEN("biospecimen_supplement"),
-        CLINICAL("clinical_supplement");
+        CLINICAL("clinical_supplement"),
+        MUTATION("masked_somatic_mutation"),;
 
         private final String type;
 
@@ -42,5 +69,24 @@ public class CommonDataUtil {
         public String toString(){
             return this.type;
         }
+    }
+
+    public static List<File> getFileList(List<Hits> gdcFileMetadatas, CommonDataUtil.GDC_TYPE type, String sourceDir) {
+        List<File> fileList = new ArrayList<>();
+        if (!gdcFileMetadatas.isEmpty()) {
+            for (Hits data : gdcFileMetadatas) {
+                if (data.getType().equals(type.toString())) {
+                    File file = new File(sourceDir, data.getFile_name());
+                    if (file.exists()) {
+                        fileList.add(file);
+                    } else {
+                        if (LOG.isInfoEnabled()) {
+                            LOG.info(type.toString() + " file : " + file.getAbsolutePath() + " not found.\nSkipping File");
+                        }
+                    }
+                }
+            }
+        }
+        return fileList;
     }
 }

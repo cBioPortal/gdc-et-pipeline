@@ -10,7 +10,10 @@ import org.cbio.gdcpipeline.tasklet.SetUpPipelineTasklet;
 import org.cbio.gdcpipeline.util.CommonDataUtil;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
-import org.springframework.batch.core.configuration.annotation.*;
+import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
+import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
+import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.job.builder.FlowBuilder;
 import org.springframework.batch.core.job.flow.Flow;
 import org.springframework.batch.core.job.flow.JobExecutionDecider;
@@ -20,6 +23,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
 import javax.annotation.Resource;
 
 /**
@@ -41,9 +45,14 @@ public class BatchConfiguration {
     @Resource(name = "clinicalMetaDataStep")
     Step clinicalMetaDataStep;
 
+    @Resource(name = "mutationDataStep")
+    Step mutationDataStep;
+
+    @Resource(name = "mutationMetaDataStep")
+    Step mutationMetaDataStep;
+
     @Value("${chunk.interval}")
     private int chunkInterval;
-
 
     @Bean
     public Step setUpPipeline() {
@@ -69,13 +78,11 @@ public class BatchConfiguration {
                 .build();
     }
 
-
     @Bean
     @StepScope
     public Tasklet processManifestFileTasklet() {
         return new ProcessManifestFileTasklet();
     }
-
 
     @Bean
     @StepScope
@@ -117,6 +124,15 @@ public class BatchConfiguration {
     }
 
     @Bean
+    public Flow mutationDataFlow() {
+        return new FlowBuilder<Flow>("mutationDataFlow")
+                .start(mutationDataStep)
+                .from(mutationDataStep).on("CONTINUE").to(mutationDataStep)
+                .next(mutationMetaDataStep)
+                .build();
+    }
+
+    @Bean
     public JobExecutionDecider clinicalFileTypeDecider() {
         return new ClinicalFileTypeDecider();
     }
@@ -133,7 +149,9 @@ public class BatchConfiguration {
     @Bean
     public Flow gdcAllDatatypesFlow() {
         return new FlowBuilder<Flow>("gdcAllDatatypesFlow")
-                .start(clinicalFileTypeDeciderFlow())
+                .start(clinicalFileTypeDecider())
+                .on(CommonDataUtil.GDC_DATAFORMAT.BCR_XML.toString()).to(clinicalXmlDataFlow())
+                .next(mutationDataFlow())
                 .build();
     }
 
@@ -145,18 +163,18 @@ public class BatchConfiguration {
                 .build();
     }
 
-    @JobScope
-    public JobExecutionDecider stepDecider() {
-        return new StepDecider();
+    public Flow stepDeciderFlow() {
+        return new FlowBuilder<Flow>("stepDeciderFlow")
+                .start(stepDecider())
+                .on(StepDecider.STEP.ALL.toString()).to(gdcAllDatatypesFlow())
+                .from(stepDecider()).on(StepDecider.STEP.CLINICAL.toString()).to(clinicalFileTypeDeciderFlow())
+                .from(stepDecider()).on(StepDecider.STEP.MUTATION.toString()).to(mutationDataFlow())
+                .build();
     }
 
     @Bean
-    public Flow gdcPipelineFlow() {
-        return new FlowBuilder<Flow>("gdcPipelineFlow")
-                .start(stepDecider())
-                .on(StepDecider.STEP.ALL.toString()).to(gdcAllDatatypesFlow())
-                .on(StepDecider.STEP.CLINICAL.toString()).to(clinicalFileTypeDeciderFlow())
-                .build();
+    public JobExecutionDecider stepDecider() {
+        return new StepDecider();
     }
 
     // Flow of All Steps
@@ -164,7 +182,7 @@ public class BatchConfiguration {
     public Job gdcJob() {
         return jobBuilderFactory.get("gdcJob")
                 .start(configurePipelineFlow())
-                .next(gdcPipelineFlow())
+                .next(stepDeciderFlow())
                 .end()
                 .build();
     }
