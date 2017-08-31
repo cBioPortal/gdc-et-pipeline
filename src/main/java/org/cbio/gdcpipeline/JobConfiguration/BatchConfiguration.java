@@ -177,7 +177,6 @@ public class BatchConfiguration {
         return new StepDecider();
     }
 
-
     // Flow of All Steps
     @Bean
     public Job gdcJob() {

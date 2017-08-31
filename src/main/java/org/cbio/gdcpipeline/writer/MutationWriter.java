@@ -24,10 +24,6 @@ import java.util.List;
 public class MutationWriter implements ItemStreamWriter<MutationRecord> {
     @Value("#{jobParameters[outputDirectory]}")
     private String outputDir;
-
-    @Value("#{jobExecutionContext[separate_maf]}")
-    private String separate_maf;
-
     private final String ADDITIONAL_MAF_COLUMN_NAME="Caller";
 
     private FlatFileItemWriter<MutationRecord> mutationWriter = new FlatFileItemWriter<>();

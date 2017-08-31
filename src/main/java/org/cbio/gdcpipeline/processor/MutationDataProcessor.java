@@ -9,7 +9,7 @@ import java.util.regex.Pattern;
 /**
  * @author Dixit Patel
  */
-public class MutationSampleProcessor implements ItemProcessor<MutationRecord,MutationRecord> {
+public class MutationDataProcessor implements ItemProcessor<MutationRecord,MutationRecord> {
     private static Pattern pattern = Pattern.compile("^(TCGA-\\w\\w-\\w\\w\\w\\w-(\\d\\d|Tumor)).*$");
 
     @Override
@@ -22,7 +22,7 @@ public class MutationSampleProcessor implements ItemProcessor<MutationRecord,Mut
     private String extractSampleId(String record) {
         Matcher matcher = pattern.matcher(record);
         if(matcher.find()) {
-            record=matcher.group();
+            record = matcher.group();
         }
         return record;
     }

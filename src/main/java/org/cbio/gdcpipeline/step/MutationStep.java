@@ -4,7 +4,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.cbio.gdcpipeline.listener.MutationStepListener;
 import org.cbio.gdcpipeline.model.cbio.MutationRecord;
-import org.cbio.gdcpipeline.processor.MutationSampleProcessor;
+import org.cbio.gdcpipeline.processor.MutationDataProcessor;
 import org.cbio.gdcpipeline.reader.MutationReader;
 import org.cbio.gdcpipeline.tasklet.MutationMetadataTasklet;
 import org.cbio.gdcpipeline.writer.MutationWriter;
@@ -14,17 +14,13 @@ import org.springframework.batch.core.configuration.annotation.JobBuilderFactory
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.step.tasklet.Tasklet;
-import org.springframework.batch.item.support.CompositeItemProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
- * Created by Dixit on 03/07/17.
+ * @author Dixit Patel
  */
 
 @EnableBatchProcessing
@@ -49,12 +45,8 @@ public class MutationStep {
 
     @Bean
     @StepScope
-    public MutationSampleProcessor mutationDataProcessor() {
-        CompositeItemProcessor<MutationRecord,MutationRecord> compositeItemProcessor = new CompositeItemProcessor<>();
-        List itemProcessors = new ArrayList(2);
-        itemProcessors.add(new MutationSampleProcessor());
-        compositeItemProcessor.setDelegates(itemProcessors);
-        return new MutationSampleProcessor();
+    public MutationDataProcessor mutationDataProcessor() {
+        return new MutationDataProcessor();
     }
 
     @Bean

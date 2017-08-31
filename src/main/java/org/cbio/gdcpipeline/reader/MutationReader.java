@@ -42,13 +42,12 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
     @Value("#{jobParameters[cancer_study_id]}")
     private String cancer_study_id;
 
-    @Value("#{jobParameters[separate_maf]}")
-    private String separate_maf;
+    @Value("#{jobParameters[separate_mafs]}")
+    private String separate_mafs;
 
     private List<MutationRecord> mafRecords = new ArrayList<>();
     private static Log LOG = LogFactory.getLog(MutationReader.class);
     private Map<MutationRecord, Set<String>> seenMafRecord = new HashMap<>();
-    private ExecutionContext executionContext;
 
     @Override
     public MutationRecord read() throws Exception {
@@ -60,7 +59,6 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
 
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException {
-        this.executionContext = executionContext;
         List<File> maf_files = (List<File>) executionContext.get("mafToProcess");
         for (File file : maf_files) {
             if (LOG.isInfoEnabled()) {
@@ -68,8 +66,8 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
             }
             readFile(file);
         }
-            if (separate_maf.equalsIgnoreCase("true")) {
-                File output_file = new File(outputDir, MUTATION_DATA_FILE_PREFIX+maf_files.get(0).getName());
+            if (separate_mafs.equalsIgnoreCase("true")) {
+                File output_file = new File(outputDir, MUTATION_DATA_FILE_PREFIX + maf_files.get(0).getName());
                 executionContext.put("maf_file_to_write", output_file);
             }
             else {
@@ -108,10 +106,9 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
         reader.setLinesToSkip(metadataCount + 1);
         reader.open(new ExecutionContext());
         try {
-            MutationRecord record = reader.read();
-            while (record != null) {
+            MutationRecord record;
+            while ((record = reader.read()) != null) {
                 addRecord(record, maf_file.getName());
-                record = reader.read();
             }
         } catch (Exception e) {
             e.printStackTrace();

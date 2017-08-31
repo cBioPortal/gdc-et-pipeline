@@ -25,13 +25,13 @@ public class GDCPipelineApplication {
 
     private static Options getOptions(String []input){
 		Options options = new Options();
-        options.addRequiredOption("s","source",true,"source directory for files");
-		options.addRequiredOption("o","output",true,"output directory for files");
-		options.addRequiredOption("c", "cancer_study_id", true, "Cancer Study Id");
-		options.addRequiredOption("m","manifest_file",true,"Manifest file path");
+        options.addOption("s","source",true,"source directory for files");
+		options.addOption("o","output",true,"output directory for files");
+		options.addOption("c", "cancer_study_id", true, "Cancer Study Id");
+		options.addOption("m","manifest_file",true,"Manifest file path");
         options.addOption("f", "filter_normal_sample", true, "True or False. Flag to filter normal samples. Default is True ");
 		options.addOption("d", "datatypes", true, "Datatypes to run. Default is All");
-        options.addOption("separate_maf", "separate_maf", true, "True or False. Process and generate MAF files individually apart from merging. Default is False");
+        options.addOption("separate_mafs", "separate_mafs", true, "True or False. Process MAF files individually or merge together. Default is False");
         options.addOption("h", "help", true, "shows this help document and quits.");
 		return options;
 	}
@@ -45,7 +45,7 @@ public class GDCPipelineApplication {
 		System.exit(exitStatus);
 	}
 
-	private static void launchJob(String[] args, String sourceDirectory, String outputDirectory, String cancer_study_id, String manifest_file, String filter_normal_sample, String datatypes, String separate_maf) throws Exception {
+	private static void launchJob(String[] args, String sourceDirectory, String outputDirectory, String cancer_study_id, String manifest_file, String filter_normal_sample, String datatypes, String separate_mafs) throws Exception {
 		SpringApplication app = new SpringApplication(GDCPipelineApplication.class);
 		ConfigurableApplicationContext ctx= app.run(args);
 		Job gdcJob = ctx.getBean(GDC_JOB, Job.class);
@@ -57,7 +57,7 @@ public class GDCPipelineApplication {
                 .addString("manifest_file",manifest_file)
 				.addString("filter_normal_sample", filter_normal_sample)
 				.addString("datatypes", datatypes)
-                .addString("separate_maf", separate_maf)
+                .addString("separate_mafs", separate_mafs)
                 .toJobParameters();
 		JobExecution jobExecution = jobLauncher.run(gdcJob, jobParameters);
 	}
@@ -81,14 +81,14 @@ public class GDCPipelineApplication {
 				GDCPipelineApplication.help(options, 0, "Filter Option must either be True or False");
 			}
 		}
-        String separate_maf = DEFAULT_SEPARATE_MAF_FILES;
-        if (cli.hasOption("separate_maf")) {
-            if (cli.getOptionValue("separate_maf").toLowerCase().equals("true")) {
-                separate_maf = "true";
-            } else if (!cli.getOptionValue("separate_maf").toLowerCase().equals("false")) {
+        String separate_mafs = DEFAULT_SEPARATE_MAF_FILES;
+        if (cli.hasOption("separate_mafs")) {
+            if (cli.getOptionValue("separate_mafs").toLowerCase().equals("true")) {
+                separate_mafs = "true";
+            } else if (!cli.getOptionValue("separate_mafs").toLowerCase().equals("false")) {
                 GDCPipelineApplication.help(options, 0, "MAF File Option must either be True or False");
             }
         }
-		launchJob(args, cli.getOptionValue("source"), cli.getOptionValue("output"), cli.getOptionValue("cancer_study_id"), cli.getOptionValue("manifest_file"), filter_normal_sample, datatypes, separate_maf);
+		launchJob(args, cli.getOptionValue("source"), cli.getOptionValue("output"), cli.getOptionValue("cancer_study_id"), cli.getOptionValue("manifest_file"), filter_normal_sample, datatypes, separate_mafs);
 	}
 }
