@@ -22,6 +22,7 @@ import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 
 import javax.annotation.Resource;
@@ -31,6 +32,7 @@ import javax.annotation.Resource;
  */
 @EnableBatchProcessing
 @Configuration
+@ComponentScan(basePackages="org.cbioportal.annotator")
 public class BatchConfiguration {
     private static Log LOG = LogFactory.getLog(BatchConfiguration.class);
     @Autowired

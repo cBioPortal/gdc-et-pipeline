@@ -13,29 +13,7 @@ import java.util.List;
  */
 public class CommonDataUtil {
     public static final String NORMAL_SAMPLE_SUFFIX = "-10";
-    public static List<String> missingValueList = initMissingValueList();
     private static Log LOG = LogFactory.getLog(CommonDataUtil.class);
-
-    private static List<String> initMissingValueList() {
-        List<String> missingValueList = new ArrayList<>();
-        missingValueList.add("NA");
-        missingValueList.add("N/A");
-        missingValueList.add("N/a");
-        missingValueList.add("n/A");
-        missingValueList.add("Unknown");
-        missingValueList.add("not available");
-        return missingValueList;
-    }
-
-    public static boolean hasMissingKeys(String check) {
-        for (String ignore : missingValueList) {
-            if (check.equalsIgnoreCase(ignore)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     public enum CLINICAL_TYPE{PATIENT,SAMPLE}
     public enum CLINICAL_OS_STATUS {LIVING, DECEASED}
 
@@ -61,7 +39,7 @@ public class CommonDataUtil {
 
         private final String type;
 
-        private GDC_TYPE(String type){
+        GDC_TYPE(String type){
             this.type=type;
         }
 
