@@ -11,7 +11,6 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.GZIPInputStream;
-import java.util.zip.ZipInputStream;
 
 /**
  * @author Dixit Patel
@@ -140,10 +139,10 @@ public class CommonDataUtil {
                                 bos.write(readByte);
                             }
                             gzip.close();
+                            Path path = Files.move(Paths.get(tmp_file.getAbsolutePath()), Paths.get(temp_dir.getAbsolutePath(), extractFile.getName().replace(COMPRESSION_FORMAT.GZIP.toString(), "")));
+                            extracted.add(new File(path.toUri()));
                         }
                         bos.close();
-                        Path path = Files.move(Paths.get(tmp_file.getAbsolutePath()), Paths.get(temp_dir.getAbsolutePath(), extractFile.getName().replace(".gz", "")));
-                        extracted.add(new File(path.toUri()));
                     } catch (Exception e) {
                         e.printStackTrace();
                         deleteTempDir();
