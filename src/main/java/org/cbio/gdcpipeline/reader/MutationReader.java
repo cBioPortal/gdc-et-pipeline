@@ -4,10 +4,8 @@ import org.apache.commons.collections.map.MultiKeyMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.tomcat.util.buf.StringUtils;
-import org.cbio.gdcpipeline.util.CommonDataUtil;
 import org.cbio.gdcpipeline.util.MutationDataFileUtils;
 import org.cbioportal.annotator.Annotator;
-import org.cbioportal.models.AnnotatedRecord;
 import org.cbioportal.models.MutationRecord;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
@@ -20,13 +18,11 @@ import org.springframework.batch.item.file.transform.FieldSet;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
-import org.springframework.web.client.HttpServerErrorException;
+
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.util.stream.Collectors;
-import static org.cbioportal.models.MutationRecord.hasMissingKeys;
 
 /**
  * @author Dixit Patel
@@ -56,6 +52,7 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
     private List<MutationRecord> mafRecords = new ArrayList<>();
     private static Log LOG = LogFactory.getLog(MutationReader.class);
     private Map<MutationRecord, Set<String>> seenMafRecord = new HashMap<>();
+    private static String ADD_MAF_COLUMN_NAME = "Caller";
 
     @Override
     public MutationRecord read() throws Exception {
@@ -74,24 +71,23 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
             }
             readFile(file);
         }
-            if (separate_mafs.equalsIgnoreCase("true")) {
-                File output_file = new File(outputDir, MUTATION_DATA_FILE_PREFIX + maf_files.get(0).getName());
-                executionContext.put("maf_file_to_write", output_file);
-            }
-            else {
-                File MERGED_MAF_FILE_NAME = new File(outputDir, DEFAULT_MERGED_MAF_FILENAME);
-                executionContext.put("maf_file_to_write", MERGED_MAF_FILE_NAME);
-            }
-            for (Map.Entry<MutationRecord, Set<String>> entry : seenMafRecord.entrySet()) {
-                MutationRecord record = entry.getKey();
-                Set<String> caller = entry.getValue();
-                List<String> list = caller.stream().collect(Collectors.toList());
-                Map<String,String> addProp = new HashMap<>();
-                addProp.put("Caller",StringUtils.join(list, '|'));
-                record.setAdditionalProperties(addProp);
-                mafRecords.add(record);
-            }
+        if (separate_mafs.equalsIgnoreCase("true")) {
+            File output_file = new File(outputDir, MUTATION_DATA_FILE_PREFIX + maf_files.get(0).getName());
+            executionContext.put("maf_file_to_write", output_file);
+        } else {
+            File MERGED_MAF_FILE_NAME = new File(outputDir, DEFAULT_MERGED_MAF_FILENAME);
+            executionContext.put("maf_file_to_write", MERGED_MAF_FILE_NAME);
         }
+        for (Map.Entry<MutationRecord, Set<String>> entry : seenMafRecord.entrySet()) {
+            MutationRecord record = entry.getKey();
+            Set<String> caller = entry.getValue();
+            List<String> list = caller.stream().collect(Collectors.toList());
+            Map<String, String> additionalProperties = new HashMap<>();
+            additionalProperties.put(ADD_MAF_COLUMN_NAME, StringUtils.join(list, '|'));
+            record.setAdditionalProperties(additionalProperties);
+            mafRecords.add(record);
+        }
+    }
 
     private void readFile(File maf_file) {
         FlatFileItemReader<MutationRecord> reader = new FlatFileItemReader<>();
@@ -160,16 +156,7 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
                     e.printStackTrace();
                 }
             }
-            //annotate
-            AnnotatedRecord annotatedRecord = new AnnotatedRecord();
-            try {
-                annotatedRecord = annotator.annotateRecord(record, false, "uniprot", true);
-            } catch (HttpServerErrorException e) {
-                if (LOG.isWarnEnabled()) {
-                    LOG.warn("Failed to annotate a record from json! Sample: " + record.getTUMOR_SAMPLE_BARCODE() + " Variant: " + record.getCHROMOSOME() + ":" + record.getSTART_POSITION() + record.getREFERENCE_ALLELE() + ">" + record.getTUMOR_SEQ_ALLELE2());
-                }
-            }
-            return (MutationRecord)annotatedRecord;
+            return record;
         };
     }
 
