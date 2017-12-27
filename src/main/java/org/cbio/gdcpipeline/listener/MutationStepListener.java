@@ -55,7 +55,6 @@ public class MutationStepListener implements StepExecutionListener {
                         maf_filenames.add(MUTATION_DATA_FILE_PREFIX+file.getName());
                     }
                     stepExecution.getJobExecution().getExecutionContext().put("mutation_data_filenames", maf_filenames);
-
                     //read individually
                     List<File> mafToProcess = new ArrayList<>();
                     mafToProcess.add(maf_files.remove(0));
@@ -88,13 +87,7 @@ public class MutationStepListener implements StepExecutionListener {
     }
 
     public List<File> getMutationFileList() {
-        List<File> fileList = CommonDataUtil.getFileList(gdcFileMetadatas, CommonDataUtil.GDC_TYPE.MUTATION, sourceDir);
-        List<File> mutationFileList = null;
-        try {
-            mutationFileList = CommonDataUtil.extractCompressedFiles(fileList);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return mutationFileList;
+        return CommonDataUtil.getFileList(gdcFileMetadatas, CommonDataUtil.GDC_TYPE.MUTATION, sourceDir);
     }
+
 }

@@ -60,17 +60,19 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException {
         List<File> maf_files = (List<File>) executionContext.get("mafToProcess");
-        for (File file : maf_files) {
-            if (LOG.isInfoEnabled()) {
-                LOG.info("Processing MAF File : " + file.getAbsolutePath());
+        if (maf_files == null || maf_files.isEmpty()) {
+            throw new ItemStreamException("No MAF files to process");
+        } else {
+            for (File file : maf_files) {
+                if (LOG.isInfoEnabled()) {
+                    LOG.info("Processing MAF File : " + file.getAbsolutePath());
+                }
+                readFile(file);
             }
-            readFile(file);
-        }
             if (separate_mafs.equalsIgnoreCase("true")) {
                 File output_file = new File(outputDir, MUTATION_DATA_FILE_PREFIX + maf_files.get(0).getName());
                 executionContext.put("maf_file_to_write", output_file);
-            }
-            else {
+            } else {
                 File MERGED_MAF_FILE_NAME = new File(outputDir, DEFAULT_MERGED_MAF_FILENAME);
                 executionContext.put("maf_file_to_write", MERGED_MAF_FILE_NAME);
             }
@@ -82,7 +84,7 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
                 mafRecords.add(record);
             }
         }
-
+    }
 
 
     private void readFile(File maf_file) {

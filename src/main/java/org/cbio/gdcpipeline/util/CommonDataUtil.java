@@ -80,25 +80,6 @@ public class CommonDataUtil {
         }
     }
 
-    public static List<File> getFileList(List<Hits> gdcFileMetadatas, CommonDataUtil.GDC_TYPE type, String sourceDir) {
-        List<File> fileList = new ArrayList<>();
-        if (!gdcFileMetadatas.isEmpty()) {
-            for (Hits data : gdcFileMetadatas) {
-                if (data.getType().equals(type.toString())) {
-                    File file = new File(sourceDir, data.getFile_name());
-                    if (file.exists()) {
-                        fileList.add(file);
-                    } else {
-                        if (LOG.isInfoEnabled()) {
-                            LOG.info(type.toString() + " file : " + file.getAbsolutePath() + " not found.\nSkipping File");
-                        }
-                    }
-                }
-            }
-        }
-        return fileList;
-    }
-
     public enum COMPRESSION_FORMAT {
         GZIP(".gz");
         private final String format;
@@ -111,6 +92,40 @@ public class CommonDataUtil {
         public String toString() {
             return this.format;
         }
+    }
+
+    public static List<File> getFileList(List<Hits> gdcFileMetadatas, CommonDataUtil.GDC_TYPE type, String sourceDir) {
+        List<File> fileList = new ArrayList<>();
+        List<File> compressedFiles = new ArrayList<>();
+        if (!gdcFileMetadatas.isEmpty()) {
+            for (Hits data : gdcFileMetadatas) {
+                if (data.getType().equals(type.toString())) {
+                    File file = new File(sourceDir, data.getFile_name());
+                    if (file.exists()) {
+                        if (isCompressedFile(file)) {
+                            compressedFiles.add(file);
+                        } else {
+                            fileList.add(file);
+                        }
+                    } else {
+                        if (LOG.isInfoEnabled()) {
+                            LOG.info(type.toString() + " file : " + file.getAbsolutePath() + " not found.\nSkipping File");
+                        }
+                    }
+                }
+            }
+        }
+        if (!compressedFiles.isEmpty()) {
+            try {
+                fileList.addAll(extractCompressedFiles(compressedFiles));
+            } catch (Exception e) {
+                e.printStackTrace();
+                if (LOG.isErrorEnabled()) {
+                    LOG.error("Skipping files to extract.");
+                }
+            }
+        }
+        return fileList;
     }
 
     public static List<File> extractCompressedFiles(List<File> fileList) throws Exception {
@@ -146,7 +161,7 @@ public class CommonDataUtil {
                     } catch (Exception e) {
                         e.printStackTrace();
                         deleteTempDir();
-                        throw new Exception("Error While decompressing files");
+                        throw new Exception("Error while decompressing files");
                     }
                 }
             }

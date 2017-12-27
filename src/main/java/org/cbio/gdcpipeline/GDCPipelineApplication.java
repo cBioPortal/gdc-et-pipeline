@@ -1,8 +1,6 @@
 package org.cbio.gdcpipeline;
 
 import org.apache.commons.cli.*;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobParameters;
@@ -17,7 +15,6 @@ import org.springframework.context.ConfigurableApplicationContext;
  */
 @SpringBootApplication
 public class GDCPipelineApplication {
-	private static Log LOG = LogFactory.getLog(GDCPipelineApplication.class);
 	private final static String GDC_JOB = "gdcJob";
 	private final static String DEFAULT_DATATYPES = "ALL";
 	private final static String DEFAULT_FILTER_NORMAL_SAMPLE = "true";
@@ -32,7 +29,7 @@ public class GDCPipelineApplication {
         options.addOption("f", "filter_normal_sample", true, "True or False. Flag to filter normal samples. Default is True ");
 		options.addOption("d", "datatypes", true, "Datatypes to run. Default is All");
         options.addOption("separate_mafs", "separate_mafs", true, "True or False. Process MAF files individually or merge together. Default is False");
-        options.addOption("h", "help", true, "shows this help document and quits.");
+        options.addOption("h", "help", false, "shows this help document and quits.");
 		return options;
 	}
 
