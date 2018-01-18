@@ -3,6 +3,7 @@ package org.cbio.gdcpipeline;
 import org.apache.commons.cli.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.cbio.gdcpipeline.util.CommonDataUtil;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobParameters;
@@ -23,6 +24,9 @@ public class GDCPipelineApplication {
     private final static String DEFAULT_FILTER_NORMAL_SAMPLE = "true";
     private final static String DEFAULT_SEPARATE_MAF_FILES = "false";
     private final static String DEFAULT_ISOFORM_OVERRIDE_SOURCE = "uniprot";
+    private final static String DEFAULT_REFERENCE_GENOME_BUILD = CommonDataUtil.REFERENCE_GENOME.GRCh37.toString();
+
+
 
     private static Options getOptions(String[] input) {
         Options options = new Options();
@@ -34,6 +38,7 @@ public class GDCPipelineApplication {
         options.addOption("d", "datatypes", true, "Datatypes to run. Default is All");
         options.addOption("separate_mafs", "separate_mafs", true, "True or False. Process MAF files individually or merge together. Default is False");
         options.addOption("i", "isoformOverrideSource", true, "Isoform Override Source. Default is \'uniprot\'");
+        options.addOption("r", "reference_genome_build", true, "Reference Genome to use for processing MAF. Default is GRCh37");
         options.addOption("h", "help", false, "shows this help document and quits.");
         return options;
     }
@@ -47,7 +52,7 @@ public class GDCPipelineApplication {
         System.exit(exitStatus);
     }
 
-    private static void launchJob(String[] args, String sourceDirectory, String outputDirectory, String cancer_study_id, String manifest_file, String filter_normal_sample, String datatypes, String separate_mafs,String isoformOverrideSource) throws Exception {
+    private static void launchJob(String[] args, String sourceDirectory, String outputDirectory, String cancer_study_id, String manifest_file, String filter_normal_sample, String datatypes, String separate_mafs,String isoformOverrideSource,String reference_genome_build) throws Exception {
         SpringApplication app = new SpringApplication(GDCPipelineApplication.class);
         ConfigurableApplicationContext ctx = app.run(args);
         Job gdcJob = ctx.getBean(GDC_JOB, Job.class);
@@ -61,12 +66,9 @@ public class GDCPipelineApplication {
                 .addString("datatypes", datatypes)
                 .addString("separate_mafs", separate_mafs)
                 .addString("isoformOverrideSource",isoformOverrideSource)
+                .addString("reference_genome_build",reference_genome_build)
                 .toJobParameters();
         JobExecution jobExecution = jobLauncher.run(gdcJob, jobParameters);
-    }
-
-    private static boolean hasRequiredOption(String option, CommandLine cli) {
-        return cli.hasOption(option);
     }
 
     public static void main(String[] args) throws Exception {
@@ -89,6 +91,7 @@ public class GDCPipelineApplication {
         if (cli.hasOption("datatypes")) {
             datatypes = cli.getOptionValue("datatypes");
         }
+
         String filter_normal_sample = DEFAULT_FILTER_NORMAL_SAMPLE;
         if (cli.hasOption("filter_normal_sample")) {
             if (cli.getOptionValue("filter_normal_sample").toLowerCase().equals("false")) {
@@ -97,6 +100,7 @@ public class GDCPipelineApplication {
                 GDCPipelineApplication.help(options, 0, "Filter Option must either be True or False");
             }
         }
+
         String separate_mafs = DEFAULT_SEPARATE_MAF_FILES;
         if (cli.hasOption("separate_mafs")) {
             if (cli.getOptionValue("separate_mafs").toLowerCase().equals("true")) {
@@ -105,10 +109,20 @@ public class GDCPipelineApplication {
                 GDCPipelineApplication.help(options, 0, "MAF File Option must either be True or False");
             }
         }
+
         String isoformOverrideSource = DEFAULT_ISOFORM_OVERRIDE_SOURCE;
         if (cli.hasOption("isoformOverrideSource")) {
             isoformOverrideSource = cli.getOptionValue("isoformOverrideSource");
         }
-        launchJob(args, cli.getOptionValue("source"), cli.getOptionValue("output"), cli.getOptionValue("cancer_study_id"), cli.getOptionValue("manifest_file"), filter_normal_sample, datatypes, separate_mafs,isoformOverrideSource);
+
+        String reference_genome_build = DEFAULT_REFERENCE_GENOME_BUILD;
+        if(cli.hasOption("reference_genome_build")){
+            reference_genome_build = cli.getOptionValue("reference_genome_build");
+            if(!(CommonDataUtil.REFERENCE_GENOME.build37.contains(reference_genome_build))){
+                GDCPipelineApplication.help(options, 0, reference_genome_build+" reference genome build is not currently supported.");
+            }
+        }
+
+        launchJob(args, cli.getOptionValue("source"), cli.getOptionValue("output"), cli.getOptionValue("cancer_study_id"), cli.getOptionValue("manifest_file"), filter_normal_sample, datatypes, separate_mafs,isoformOverrideSource,reference_genome_build);
     }
 }

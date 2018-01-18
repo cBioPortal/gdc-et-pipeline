@@ -5,8 +5,7 @@ import org.apache.commons.logging.LogFactory;
 import org.cbio.gdcpipeline.model.rest.response.Hits;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 /**
  * @author Dixit Patel
@@ -48,6 +47,24 @@ public class CommonDataUtil {
             return this.type;
         }
     }
+
+    public enum REFERENCE_GENOME {
+        GRCh37("GRCh37"),
+        HG19("hg19");
+
+        public  static Set<String> build37 = new HashSet<>(Arrays.asList(GRCh37.toString(),HG19.toString()));
+        private final String ref;
+
+        REFERENCE_GENOME(String ref){
+            this.ref=ref;
+        }
+
+        @Override
+        public String toString(){
+            return this.ref;
+        }
+    }
+
 
     public static List<File> getFileList(List<Hits> gdcFileMetadatas, CommonDataUtil.GDC_TYPE type, String sourceDir) {
         List<File> fileList = new ArrayList<>();
