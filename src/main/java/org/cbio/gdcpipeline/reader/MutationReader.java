@@ -4,9 +4,9 @@ import org.apache.commons.collections.map.MultiKeyMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.tomcat.util.buf.StringUtils;
-import org.cbio.gdcpipeline.model.cbio.MutationRecord;
-import org.cbio.gdcpipeline.util.CommonDataUtil;
 import org.cbio.gdcpipeline.util.MutationDataFileUtils;
+import org.cbioportal.annotator.Annotator;
+import org.cbioportal.models.MutationRecord;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.ItemStreamReader;
@@ -15,6 +15,7 @@ import org.springframework.batch.item.file.mapping.DefaultLineMapper;
 import org.springframework.batch.item.file.mapping.FieldSetMapper;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.batch.item.file.transform.FieldSet;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 
@@ -45,9 +46,13 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
     @Value("#{jobParameters[separate_mafs]}")
     private String separate_mafs;
 
+    @Autowired
+    private Annotator annotator;
+
     private List<MutationRecord> mafRecords = new ArrayList<>();
     private static Log LOG = LogFactory.getLog(MutationReader.class);
     private Map<MutationRecord, Set<String>> seenMafRecord = new HashMap<>();
+    private static String ADD_MAF_COLUMN_NAME = "Caller";
 
     @Override
     public MutationRecord read() throws Exception {
@@ -66,24 +71,23 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
             }
             readFile(file);
         }
-            if (separate_mafs.equalsIgnoreCase("true")) {
-                File output_file = new File(outputDir, MUTATION_DATA_FILE_PREFIX + maf_files.get(0).getName());
-                executionContext.put("maf_file_to_write", output_file);
-            }
-            else {
-                File MERGED_MAF_FILE_NAME = new File(outputDir, DEFAULT_MERGED_MAF_FILENAME);
-                executionContext.put("maf_file_to_write", MERGED_MAF_FILE_NAME);
-            }
-            for (Map.Entry<MutationRecord, Set<String>> entry : seenMafRecord.entrySet()) {
-                MutationRecord record = entry.getKey();
-                Set<String> caller = entry.getValue();
-                List<String> list = caller.stream().collect(Collectors.toList());
-                record.setCaller(StringUtils.join(list, '|'));
-                mafRecords.add(record);
-            }
+        if (separate_mafs.equalsIgnoreCase("true")) {
+            File output_file = new File(outputDir, MUTATION_DATA_FILE_PREFIX + maf_files.get(0).getName());
+            executionContext.put("maf_file_to_write", output_file);
+        } else {
+            File MERGED_MAF_FILE_NAME = new File(outputDir, DEFAULT_MERGED_MAF_FILENAME);
+            executionContext.put("maf_file_to_write", MERGED_MAF_FILE_NAME);
         }
-
-
+        for (Map.Entry<MutationRecord, Set<String>> entry : seenMafRecord.entrySet()) {
+            MutationRecord record = entry.getKey();
+            Set<String> caller = entry.getValue();
+            List<String> list = caller.stream().collect(Collectors.toList());
+            Map<String, String> additionalProperties = new HashMap<>();
+            additionalProperties.put(ADD_MAF_COLUMN_NAME, StringUtils.join(list, '|'));
+            record.setAdditionalProperties(additionalProperties);
+            mafRecords.add(record);
+        }
+    }
 
     private void readFile(File maf_file) {
         FlatFileItemReader<MutationRecord> reader = new FlatFileItemReader<>();
@@ -126,10 +130,10 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
         } else {
             Iterator<Map.Entry<MutationRecord, Set<String>>> iterator = seenMafRecord.entrySet().iterator();
             Map.Entry<MutationRecord, Set<String>> entry = iterator.next();
-            while (iterator.hasNext() && !identicalVariant(entry.getKey(), newRecord)) {
+            while (iterator.hasNext() && !entry.getKey().equals(newRecord)) {
                 entry = iterator.next();
             }
-            if (!identicalVariant(entry.getKey(), newRecord)) {
+            if (!entry.getKey().equals(newRecord)) {
                 Set<String> caller = new HashSet<>();
                 caller.add(maf_filename);
                 seenMafRecord.put(newRecord, caller);
@@ -139,28 +143,12 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
         }
     }
 
-    private boolean identicalVariant(MutationRecord record, MutationRecord newRecord) {
-        return record.getTumor_Sample_Barcode().equals(newRecord.getTumor_Sample_Barcode()) &&
-                record.getChromosome().equals(newRecord.getChromosome()) &&
-                record.getStart_Position().equals(newRecord.getStart_Position()) &&
-                record.getEnd_Position().equals(newRecord.getEnd_Position()) &&
-                record.getStrand().equals(newRecord.getStrand()) &&
-                record.getReference_Allele().equals(newRecord.getReference_Allele()) && (sameTumourSequence(record, newRecord));
-    }
-
-    private boolean sameTumourSequence(MutationRecord record, MutationRecord newRecord) {
-        if (!(record.getTumor_Seq_Allele1().equals(record.getReference_Allele()) || record.getTumor_Seq_Allele1().isEmpty() || CommonDataUtil.hasMissingKeys(record.getTumor_Seq_Allele1()))) {
-            return record.getTumor_Seq_Allele1().equals(newRecord.getTumor_Seq_Allele1());
-        }
-        return record.getTumor_Seq_Allele2().equals(newRecord.getTumor_Seq_Allele2());
-    }
-
     private FieldSetMapper<MutationRecord> mutationFieldSetMapper() {
         return (FieldSetMapper<MutationRecord>) (FieldSet fs) -> {
             MutationRecord record = new MutationRecord();
             for (String header : record.getHeader()) {
                 try {
-                    record.getClass().getMethod("set" + header, String.class).invoke(record, fs.readString(header));
+                    record.getClass().getMethod("set" + header.toUpperCase(), String.class).invoke(record, fs.readString(header));
                 } catch (Exception e) {
                     if (LOG.isDebugEnabled()) {
                         LOG.error(" Error in setting record for :" + header);

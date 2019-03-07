@@ -3,11 +3,12 @@ package org.cbio.gdcpipeline.step;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.cbio.gdcpipeline.listener.MutationStepListener;
-import org.cbio.gdcpipeline.model.cbio.MutationRecord;
-import org.cbio.gdcpipeline.processor.MutationDataProcessor;
+import org.cbio.gdcpipeline.processor.MutationProcessor;
 import org.cbio.gdcpipeline.reader.MutationReader;
 import org.cbio.gdcpipeline.tasklet.MutationMetadataTasklet;
 import org.cbio.gdcpipeline.writer.MutationWriter;
+import org.cbioportal.models.AnnotatedRecord;
+import org.cbioportal.models.MutationRecord;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
@@ -45,8 +46,8 @@ public class MutationStep {
 
     @Bean
     @StepScope
-    public MutationDataProcessor mutationDataProcessor() {
-        return new MutationDataProcessor();
+    public MutationProcessor mutationDataProcessor() {
+        return new MutationProcessor();
     }
 
     @Bean
@@ -65,7 +66,7 @@ public class MutationStep {
     public Step mutationDataStep() {
         return stepBuilderFactory.get("mutationDataStep")
                 .listener(mutationStepListener())
-                .<MutationRecord, MutationRecord>chunk(chunkInterval)
+                .<MutationRecord, AnnotatedRecord>chunk(chunkInterval)
                 .reader(mutationDataReader())
                 .processor(mutationDataProcessor())
                 .writer(mutationDataWriter())

@@ -1,7 +1,7 @@
 package org.cbio.gdcpipeline.writer;
 
 import org.apache.tomcat.util.buf.StringUtils;
-import org.cbio.gdcpipeline.model.cbio.MutationRecord;
+import org.cbioportal.models.AnnotatedRecord;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.ItemStreamWriter;
@@ -21,12 +21,10 @@ import java.util.List;
 /**
  * @author Dixit Patel
  */
-public class MutationWriter implements ItemStreamWriter<MutationRecord> {
+public class MutationWriter implements ItemStreamWriter<AnnotatedRecord> {
     @Value("#{jobParameters[outputDirectory]}")
     private String outputDir;
-    private final String ADDITIONAL_MAF_COLUMN_NAME="Caller";
-
-    private FlatFileItemWriter<MutationRecord> mutationWriter = new FlatFileItemWriter<>();
+    private FlatFileItemWriter<AnnotatedRecord> mutationWriter = new FlatFileItemWriter<>();
     private ExecutionContext executionContext;
 
     @Override
@@ -37,24 +35,24 @@ public class MutationWriter implements ItemStreamWriter<MutationRecord> {
     }
 
     private void configureWriter(File maf_filename) {
-        MutationRecord record = new MutationRecord();
+        AnnotatedRecord record = new AnnotatedRecord();
         mutationWriter.setShouldDeleteIfExists(true);
         mutationWriter.setLineSeparator(System.lineSeparator());
         mutationWriter.setHeaderCallback(mutationHeader(record));
-        DelimitedLineAggregator<MutationRecord> lineAggregator = new DelimitedLineAggregator<>();
+        DelimitedLineAggregator<AnnotatedRecord> lineAggregator = new DelimitedLineAggregator<>();
         lineAggregator.setDelimiter("\t");
-        FieldExtractor<MutationRecord> fe = createFieldExtractor(record);
+        FieldExtractor<AnnotatedRecord> fe = createFieldExtractor(record);
         lineAggregator.setFieldExtractor(fe);
         mutationWriter.setLineAggregator(lineAggregator);
         mutationWriter.setResource(new FileSystemResource(maf_filename));
         mutationWriter.open(this.executionContext);
     }
 
-    private FlatFileHeaderCallback mutationHeader(MutationRecord data) {
+    private FlatFileHeaderCallback mutationHeader(AnnotatedRecord data) {
         return new FlatFileHeaderCallback() {
             @Override
             public void writeHeader(Writer writer) throws IOException {
-                List<String> headers = data.getHeader();
+                List<String> headers = data.getHeaderWithAdditionalFields();
                 StringBuilder sb = new StringBuilder();
                 sb.append(StringUtils.join(headers, '\t'));
                 writer.write(sb.toString());
@@ -62,18 +60,17 @@ public class MutationWriter implements ItemStreamWriter<MutationRecord> {
         };
     }
 
-    private FieldExtractor<MutationRecord> createFieldExtractor(MutationRecord data) {
-        BeanWrapperFieldExtractor<MutationRecord> ext = new BeanWrapperFieldExtractor<>();
-        List<String> fieldList = data.getHeader();
-        fieldList.add(ADDITIONAL_MAF_COLUMN_NAME);
+    private FieldExtractor<AnnotatedRecord> createFieldExtractor(AnnotatedRecord data) {
+        BeanWrapperFieldExtractor<AnnotatedRecord> ext = new BeanWrapperFieldExtractor<>();
+        List<String> fieldList = data.getHeaderWithAdditionalFields();
         String[] fields = new String[fieldList.size()];
-        fields = data.getHeader().toArray(fields);
+        fields = data.getHeaderWithAdditionalFields().toArray(fields);
         ext.setNames(fields);
         return ext;
     }
 
     @Override
-    public void write(List<? extends MutationRecord> list) throws Exception {
+    public void write(List<? extends AnnotatedRecord> list) throws Exception {
         mutationWriter.write(list);
     }
 

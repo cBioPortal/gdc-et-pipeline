@@ -5,37 +5,14 @@ import org.apache.commons.logging.LogFactory;
 import org.cbio.gdcpipeline.model.rest.response.Hits;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 /**
  * @author Dixit Patel
  */
 public class CommonDataUtil {
     public static final String NORMAL_SAMPLE_SUFFIX = "-10";
-    public static List<String> missingValueList = initMissingValueList();
     private static Log LOG = LogFactory.getLog(CommonDataUtil.class);
-
-    private static List<String> initMissingValueList() {
-        List<String> missingValueList = new ArrayList<>();
-        missingValueList.add("NA");
-        missingValueList.add("N/A");
-        missingValueList.add("N/a");
-        missingValueList.add("n/A");
-        missingValueList.add("Unknown");
-        missingValueList.add("not available");
-        return missingValueList;
-    }
-
-    public static boolean hasMissingKeys(String check) {
-        for (String ignore : missingValueList) {
-            if (check.equalsIgnoreCase(ignore)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     public enum CLINICAL_TYPE{PATIENT,SAMPLE}
     public enum CLINICAL_OS_STATUS {LIVING, DECEASED}
 
@@ -61,7 +38,7 @@ public class CommonDataUtil {
 
         private final String type;
 
-        private GDC_TYPE(String type){
+        GDC_TYPE(String type){
             this.type=type;
         }
 
@@ -70,6 +47,24 @@ public class CommonDataUtil {
             return this.type;
         }
     }
+
+    public enum REFERENCE_GENOME {
+        GRCh37("GRCh37"),
+        HG19("hg19");
+
+        public  static Set<String> build37 = new HashSet<>(Arrays.asList(GRCh37.toString(),HG19.toString()));
+        private final String ref;
+
+        REFERENCE_GENOME(String ref){
+            this.ref=ref;
+        }
+
+        @Override
+        public String toString(){
+            return this.ref;
+        }
+    }
+
 
     public static List<File> getFileList(List<Hits> gdcFileMetadatas, CommonDataUtil.GDC_TYPE type, String sourceDir) {
         List<File> fileList = new ArrayList<>();
