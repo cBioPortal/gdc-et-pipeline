@@ -22,21 +22,23 @@ The batch runs in several steps each accomplishing a different task. Current imp
 The batch has some required options as well as optional parameters that user can provide. 
 
     $JAVA_HOME org.cbio.gdcpipeline.GDCPipelineApplication -<option>
-    List of options : <br>
-    -c,--cancer_study_id <arg>             Cancer Study Id 
-    -d,--datatypes <arg>                   Datatypes to run. Default is All
-    -f,--filter_normal_sample <arg>        True or False. Flag to filter
-                                           normal samples. Default is True
-    -h,--help                              shows this help document and
-                                           quits.
-    -i,--isoformOverrideSource <arg>       Isoform Override Source. Default
-                                           is 'uniprot'
-    -m,--manifest_file <arg>               Manifest file path
-    -o,--output <arg>                      output directory for files
-    -s,--source <arg>                      source directory for files
-    -separate_mafs,--separate_mafs <arg>   True or False. Process MAF files
-                                           individually or merge together.
-                                           Default is False 
+    List of options : 
+    -c,--cancer_study_id <arg>             [REQUIRED]  Cancer Study Id 
+    -o,--output <arg>                      [REQUIRED]  output directory for files
+    -s,--source <arg>                      [REQUIRED]  source directory for files
+    -d,--datatypes <arg>                   [OPTIONAL]  Datatypes to run. Default is All
+    -f,--filter_normal_sample <arg>        [OPTIONAL]  True or False. Flag to filter
+                                                       normal samples. Default is True
+
+    -i,--isoformOverrideSource <arg>       [OPTIONAL]  Isoform Override Source. Default
+                                                       is 'uniprot'
+    -m,--manifest_file <arg>               [OPTIONAL]  Manifest file path
+
+    -separate_mafs,--separate_mafs <arg>   [OPTIONAL]  True or False. Process MAF files
+                                                       individually or merge together.
+                                                       Default is False
+    -h,--help                                          shows this help document and
+                                                       quits.                                          
 
 
 
