@@ -8,8 +8,7 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.zip.GZIPInputStream;
 
 /**
@@ -22,6 +21,7 @@ public class CommonDataUtil {
     private static String SYSTEM_TMP_DIR_PROPERTY = "java.io.tmpdir";
     private static String TMP_DIR_NAME = "gdcpipeline";
     private static File temp_dir;
+    private static List<String> missingValueList = initMissingValueList();
 
     private static List<String> initMissingValueList() {
         List<String> missingValueList = new ArrayList<>();

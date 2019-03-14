@@ -3,7 +3,6 @@ package org.cbio.gdcpipeline.reader;
 import org.apache.commons.collections.map.MultiKeyMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.tomcat.util.buf.StringUtils;
 import org.cbio.gdcpipeline.util.MutationDataFileUtils;
 import org.cbioportal.annotator.Annotator;
 import org.cbioportal.models.MutationRecord;
@@ -23,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
+import org.apache.commons.lang.StringUtils;
 
 /**
  * @author Dixit Patel
@@ -86,7 +86,7 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
             MutationRecord record = entry.getKey();
             Set<String> caller = entry.getValue();
             List<String> list = caller.stream().collect(Collectors.toList());
-            record.setCaller(StringUtils.join(list, '|'));
+            record.getAdditionalProperties().put("Caller", StringUtils.join(list, '|'));
             mafRecords.add(record);
         }
     }

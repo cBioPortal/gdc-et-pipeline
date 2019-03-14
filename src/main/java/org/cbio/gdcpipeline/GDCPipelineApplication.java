@@ -1,12 +1,11 @@
 package org.cbio.gdcpipeline;
 
 import org.apache.commons.cli.*;
-<<<<<<< HEAD
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.cbio.gdcpipeline.util.CommonDataUtil;
-=======
->>>>>>> Added file compression check while getting file list for datatype
+
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobParameters;
@@ -21,7 +20,6 @@ import org.springframework.context.ConfigurableApplicationContext;
  */
 @SpringBootApplication
 public class GDCPipelineApplication {
-<<<<<<< HEAD
     private static Log LOG = LogFactory.getLog(GDCPipelineApplication.class);
     private final static String GDC_JOB = "gdcJob";
     private final static String DEFAULT_DATATYPES = "ALL";
@@ -29,14 +27,6 @@ public class GDCPipelineApplication {
     private final static String DEFAULT_SEPARATE_MAF_FILES = "false";
     private final static String DEFAULT_ISOFORM_OVERRIDE_SOURCE = "uniprot";
     private final static String DEFAULT_REFERENCE_GENOME_BUILD = CommonDataUtil.REFERENCE_GENOME.GRCh37.toString();
-=======
-	private final static String GDC_JOB = "gdcJob";
-	private final static String DEFAULT_DATATYPES = "ALL";
-	private final static String DEFAULT_FILTER_NORMAL_SAMPLE = "true";
-	private final static String DEFAULT_SEPARATE_MAF_FILES = "false";
->>>>>>> Added file compression check while getting file list for datatype
-
-
 
     private static Options getOptions(String[] input) {
         Options options = new Options();
@@ -47,17 +37,11 @@ public class GDCPipelineApplication {
         options.addOption("f", "filter_normal_sample", true, "True or False. Flag to filter normal samples. Default is True ");
         options.addOption("d", "datatypes", true, "Datatypes to run. Default is All");
         options.addOption("separate_mafs", "separate_mafs", true, "True or False. Process MAF files individually or merge together. Default is False");
-<<<<<<< HEAD
         options.addOption("i", "isoformOverrideSource", true, "Isoform Override Source. Default is \'uniprot\'");
         options.addOption("r", "reference_genome_build", true, "Reference Genome to use for processing MAF. Default is GRCh37");
         options.addOption("h", "help", false, "shows this help document and quits.");
         return options;
     }
-=======
-        options.addOption("h", "help", false, "shows this help document and quits.");
-		return options;
-	}
->>>>>>> Added file compression check while getting file list for datatype
 
     private static void help(Options gnuOptions, int exitStatus, String opt) {
         HelpFormatter helpFormatter = new HelpFormatter();

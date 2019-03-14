@@ -174,7 +174,7 @@ public class ProcessManifestFileTasklet implements Tasklet {
         ResponseEntity<GdcApiResponse> response = restTemplate.exchange(url, HttpMethod.POST, entity, GdcApiResponse.class);
         if (response.getStatusCode() != HttpStatus.OK) {
             if (LOG.isErrorEnabled()) {
-                LOG.error("Error calling GDC API. Response code is :" + response.getStatusCodeValue()
+                LOG.error("Error calling GDC API. Response code is :" + response.getStatusCode().toString()
                         + " Response Message is : " + response.getStatusCode().getReasonPhrase());
             }
             throw new Exception();
