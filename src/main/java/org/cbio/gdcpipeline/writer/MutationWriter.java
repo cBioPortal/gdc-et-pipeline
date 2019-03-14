@@ -1,6 +1,5 @@
 package org.cbio.gdcpipeline.writer;
 
-import org.apache.tomcat.util.buf.StringUtils;
 import org.cbioportal.models.AnnotatedRecord;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
@@ -17,6 +16,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.List;
+import org.apache.commons.lang.StringUtils;
 
 /**
  * @author Dixit Patel

@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.cbioportal.annotator.GenomeNexusAnnotationFailureException;
 
 /**
  * @author Dixit Patel
@@ -66,7 +67,7 @@ public class MutationProcessor implements ItemProcessor<MutationRecord,Annotated
         return validChrValues.get(chromosome);
     }
 
-    private AnnotatedRecord annotateRecord(MutationRecord record) {
+    private AnnotatedRecord annotateRecord(MutationRecord record) throws GenomeNexusAnnotationFailureException {
         AnnotatedRecord annotatedRecord = new AnnotatedRecord();
         try {
             annotatedRecord = annotator.annotateRecord(record, false, isoformOverrideSource, true);

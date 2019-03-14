@@ -1,9 +1,11 @@
 package org.cbio.gdcpipeline;
 
 import org.apache.commons.cli.*;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.cbio.gdcpipeline.util.CommonDataUtil;
+
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobParameters;
@@ -25,8 +27,6 @@ public class GDCPipelineApplication {
     private final static String DEFAULT_SEPARATE_MAF_FILES = "false";
     private final static String DEFAULT_ISOFORM_OVERRIDE_SOURCE = "uniprot";
     private final static String DEFAULT_REFERENCE_GENOME_BUILD = CommonDataUtil.REFERENCE_GENOME.GRCh37.toString();
-
-
 
     private static Options getOptions(String[] input) {
         Options options = new Options();

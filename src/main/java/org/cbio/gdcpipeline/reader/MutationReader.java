@@ -3,7 +3,6 @@ package org.cbio.gdcpipeline.reader;
 import org.apache.commons.collections.map.MultiKeyMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.tomcat.util.buf.StringUtils;
 import org.cbio.gdcpipeline.util.MutationDataFileUtils;
 import org.cbioportal.annotator.Annotator;
 import org.cbioportal.models.MutationRecord;
@@ -23,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
+import org.apache.commons.lang.StringUtils;
 
 /**
  * @author Dixit Patel
@@ -65,11 +65,15 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException {
         List<File> maf_files = (List<File>) executionContext.get("mafToProcess");
-        for (File file : maf_files) {
-            if (LOG.isInfoEnabled()) {
-                LOG.info("Processing MAF File : " + file.getAbsolutePath());
+        if (maf_files == null || maf_files.isEmpty()) {
+            throw new ItemStreamException("No MAF files to process");
+        } else {
+            for (File file : maf_files) {
+                if (LOG.isInfoEnabled()) {
+                    LOG.info("Processing MAF File : " + file.getAbsolutePath());
+                }
+                readFile(file);
             }
-            readFile(file);
         }
         if (separate_mafs.equalsIgnoreCase("true")) {
             File output_file = new File(outputDir, MUTATION_DATA_FILE_PREFIX + maf_files.get(0).getName());
@@ -82,9 +86,7 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
             MutationRecord record = entry.getKey();
             Set<String> caller = entry.getValue();
             List<String> list = caller.stream().collect(Collectors.toList());
-            Map<String, String> additionalProperties = new HashMap<>();
-            additionalProperties.put(ADD_MAF_COLUMN_NAME, StringUtils.join(list, '|'));
-            record.setAdditionalProperties(additionalProperties);
+            record.getAdditionalProperties().put("Caller", StringUtils.join(list, '|'));
             mafRecords.add(record);
         }
     }
