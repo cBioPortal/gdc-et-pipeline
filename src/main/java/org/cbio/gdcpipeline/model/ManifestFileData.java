@@ -12,6 +12,9 @@ public class ManifestFileData {
     private String md5;
     private String size;
     private String state;
+    private String submitterId;
+    private String submitterSampleIds;
+    private String datatype;
 
     public List<String> getHeader(){
         List<String> header = new ArrayList<>();
@@ -60,5 +63,33 @@ public class ManifestFileData {
 
     public void setFilename(String filename) {
         this.filename = filename;
+    }
+
+    public String getSubmitterId() {
+        return this.submitterId;
+    }
+
+    public void setSubmitterId(String submitterId) {
+        this.submitterId = submitterId;
+    }
+
+    public String getSubmitterSampleIds() {
+        return this.submitterSampleIds;
+    }
+
+    public void setSubmitterSampleIds(String submitterSampleIds) {
+        this.submitterSampleIds = submitterSampleIds;
+    }
+
+    public String getDatatype() {
+        return datatype;
+    }
+
+    public void setDatatype(String datatype) {
+        this.datatype = datatype;
+    }
+    
+    public String getNormalizedDatatype() {
+        return this.getDatatype().toLowerCase().replace(" ", "_");
     }
 }

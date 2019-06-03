@@ -22,6 +22,7 @@ import org.springframework.context.annotation.Configuration;
 
 import java.util.ArrayList;
 import java.util.List;
+import org.springframework.batch.core.listener.ExecutionContextPromotionListener;
 
 /**
  * @author Dixit Patel
@@ -44,6 +45,14 @@ public class ClinicalStep {
     @StepScope
     public ClinicalReader clinicalReader() {
         return new ClinicalReader();
+    }
+
+    @Bean
+    public ExecutionContextPromotionListener clinicalDataListener() {
+        String[] keys = new String[]{"barcodeToSamplesMap"};
+        ExecutionContextPromotionListener executionContextPromotionListener = new ExecutionContextPromotionListener();
+        executionContextPromotionListener.setKeys(keys);
+        return executionContextPromotionListener;
     }
 
     public CompositeItemWriter<ClinicalDataModel> compositeItemWriter() {
@@ -75,6 +84,7 @@ public class ClinicalStep {
     @Bean
     public Step clinicalDataStep() {
         return stepBuilderFactory.get("clinicalDataStep")
+                .listener(clinicalDataListener())
                 .<ClinicalDataModel, ClinicalDataModel>chunk(chunkInterval)
                 .reader(clinicalReader())
                 .writer(compositeItemWriter())
