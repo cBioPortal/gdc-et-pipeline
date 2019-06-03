@@ -13,8 +13,8 @@ import org.cbio.gdcpipeline.model.GDCCase;
  */
 
 /** TODO: The field names and getters/setters should be changed to camel case
- * at some point. This will require changing how the fields extractor in 
- * the writer functions 
+ * at some point. This will require changing how the fields extractor in
+ * the writer functions
  */
 public class Patient extends ClinicalDataModel {
     private String patient_id;
@@ -87,7 +87,7 @@ public class Patient extends ClinicalDataModel {
         this.ethnicity = ethnicity;
         this.tumor_grade = tumor_grade;
     }
-    
+
     public Patient(GDCCase gdcCase) {
         patient_id = gdcCase.getPatientId();
         gender = gdcCase.getGender();
@@ -188,12 +188,12 @@ public class Patient extends ClinicalDataModel {
      * If the patient is alive, use the number of days since to the last follow up
      * If the patient is deceased, use the number of days to death. Both values
      * are divided by the average number of days in a month.
-     * 
+     *
      * @param daysToDeath
      * @param daysToLastFollowup
      * @param vitalStatus
-     * @return 
-     */    
+     * @return
+     */
     public static String calcOverallSurvivalMonths(double daysToDeath, double daysToLastFollowup, String vitalStatus) {
         String osSurvivalMonths = "NA";
         if (VitalStatusAlive.has(vitalStatus)) {

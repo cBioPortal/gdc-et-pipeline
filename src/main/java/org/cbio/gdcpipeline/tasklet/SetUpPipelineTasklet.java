@@ -23,8 +23,8 @@ public class SetUpPipelineTasklet implements Tasklet {
     private String sourceDir;
 
     @Value("#{jobParameters[cancer_study_id]}")
-    private String cancer_study_id;
-
+    private String cancer_study_id; 
+    
     private static Log LOG = LogFactory.getLog(SetUpPipelineTasklet.class);
 
     @Override

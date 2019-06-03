@@ -1,8 +1,9 @@
 package org.cbio.gdcpipeline.model;
 
+import java.util.List;
+import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.cbio.gdcpipeline.model.cbio.Patient;
 import org.cbio.gdcpipeline.util.CommonDataUtil;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -23,6 +24,10 @@ public class GDCCase {
     private String sampleId;
     private String patientId;
     private String sampleType;
+    private String sampleUUID;
+    private String caseId;
+    private String sampleTypeId;
+    private List<String> aliquotIds = new ArrayList<>();
     private double yearOfBirth;
     private double daysToDeath;
     private double yearOfDiagnosis;
@@ -38,7 +43,8 @@ public class GDCCase {
         JSONObject demographic = (JSONObject) node.get("demographic");
         JSONObject diagnoses = (JSONObject) node.get("diagnoses");
         JSONObject diagnosesHits = (JSONObject) diagnoses.get("hits");
-        JSONArray diagnosesEdges = (JSONArray) diagnosesHits.get("edges");        
+        JSONArray diagnosesEdges = (JSONArray) diagnosesHits.get("edges");
+        caseId = (String) node.get("case_id");
         // Patient data
         if (node.get("disease_type") != null) {
             cancerType = (String) node.get("disease_type");
@@ -88,16 +94,39 @@ public class GDCCase {
             JSONObject sample = (JSONObject) sampleObject;
             JSONObject sampleNode = (JSONObject) sample.get("node");
             String submitterId = (String) sampleNode.get("submitter_id");
+            sampleUUID = (String) sampleNode.get("sample_id");
+            sampleTypeId = (String) sampleNode.get("sample_type_id");
             if (sampleNode.get("sample_type") != null) {
                 sampleType = (String) sampleNode.get("sample_type");
             }
-            if (!(filterNormalSampleFlag.equals("true") && sampleType.equals(CommonDataUtil.NORMAL_SAMPLE_SUFFIX))) {
+            if ((filterNormalSampleFlag.equals("true") && !sampleTypeId.equals(CommonDataUtil.NORMAL_SAMPLE_SUFFIX))) {
                 Matcher tcgaSampleBarcodeMatcher = TCGA_SAMPLE_BARCODE_REGEX.matcher(submitterId);
                 sampleId = (tcgaSampleBarcodeMatcher.find()) ? tcgaSampleBarcodeMatcher.group(1) : submitterId;
                 String barcodeParts[] = submitterId.split("-");
-                String pid = barcodeParts[0] + "-" + barcodeParts[1] + "-" + barcodeParts[2];
-                String osMonths = Patient.calcOverallSurvivalMonths(daysToDeath, daysToLastFollowUp, osStatus);
-                break;
+                patientId = barcodeParts[0] + "-" + barcodeParts[1] + "-" + barcodeParts[2];
+                // Drill down to get the aliquot id mapping
+                JSONObject portions = (JSONObject) sampleNode.get("portions");
+                JSONObject portionHits = (JSONObject) portions.get("hits");
+                JSONArray portionEdges = (JSONArray) portionHits.get("edges");
+                for (Object portionObject : portionEdges) {
+                    JSONObject portion = (JSONObject) portionObject;
+                    JSONObject portionNode = (JSONObject) portion.get("node");
+                    JSONObject analytes = (JSONObject) portionNode.get("analytes");
+                    JSONObject analyteHits = (JSONObject) analytes.get("hits");
+                    JSONArray analytesEdges = (JSONArray) analyteHits.get("edges");
+                    for (Object analyteObject : analytesEdges) {
+                        JSONObject analyte = (JSONObject) analyteObject;
+                        JSONObject analyteNode = (JSONObject) analyte.get("node");
+                        JSONObject aliquots = (JSONObject) analyteNode.get("aliquots");
+                        JSONObject aliquotsHits = (JSONObject) aliquots.get("hits");
+                        JSONArray aliquotsEdges = (JSONArray) aliquotsHits.get("edges");
+                        for (Object aliquotObject : aliquotsEdges) {
+                            JSONObject aliquot = (JSONObject) aliquotObject;
+                            JSONObject aliquotHit = (JSONObject) aliquot.get("node");
+                            aliquotIds.add((String) aliquotHit.get("aliquot_id")); 
+                        }
+                    }
+                }
             }
         }        
     }
@@ -220,5 +249,29 @@ public class GDCCase {
     
     public void setDaysToLastFollowUp(double daysToLastFollowUp) {
         this.daysToLastFollowUp = daysToLastFollowUp;
+    }
+    
+    public List<String> getAliquotIds() {
+        return aliquotIds;
+    }
+    
+    public void setAliquoteIds(List<String> aliquotIds) {
+        this.aliquotIds = aliquotIds;
+    }
+    
+    public void setCaseId(String caseId) {
+        this.caseId = caseId;
+    }    
+
+    public String getCaseId() {
+        return caseId;
+    }
+
+    public void setSampleUUID(String sampleUUID) {
+        this.sampleUUID = sampleUUID;
+    }    
+
+    public String getSampleUUID() {
+        return sampleUUID;
     }    
 }

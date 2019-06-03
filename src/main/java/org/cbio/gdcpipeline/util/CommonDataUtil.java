@@ -64,9 +64,10 @@ public class CommonDataUtil {
     public enum GDC_TYPE {
         BIOSPECIMEN("biospecimen_supplement"),
         CLINICAL("clinical_supplement"),
-        MUTATION("masked_somatic_mutation"),;
+        MUTATION("masked_somatic_mutation"),
+        CNA("gene_level_copy_number_scores");
 
-        private final String type;
+        private final String type;  
 
         GDC_TYPE(String type){
             this.type=type;

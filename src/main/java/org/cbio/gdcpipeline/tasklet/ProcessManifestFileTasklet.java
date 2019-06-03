@@ -18,7 +18,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import java.io.BufferedReader;
 import java.io.FileReader;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -105,7 +104,6 @@ public class ProcessManifestFileTasklet implements Tasklet {
             return record;
         };
     }
-
     
     /**
      * Parses the json response from GDC graphql endpoint.
@@ -126,6 +124,7 @@ public class ProcessManifestFileTasklet implements Tasklet {
                     manifestFileData.setSubmitterId((String)node.get("submitter_id"));
                     manifestFileData.setSubmitterSampleIds((String)node.get("submitter_sample_ids"));
                     manifestFileData.setDatatype((String) node.get("data_type"));
+                    manifestFileData.setDataCategory((String) node.get("data_category"));
                 }
             }
             JSONObject cases = (JSONObject) node.get("cases");

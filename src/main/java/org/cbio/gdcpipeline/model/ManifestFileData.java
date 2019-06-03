@@ -15,6 +15,7 @@ public class ManifestFileData {
     private String submitterId;
     private String submitterSampleIds;
     private String datatype;
+    private String dataCategory;
 
     public List<String> getHeader(){
         List<String> header = new ArrayList<>();
@@ -91,5 +92,13 @@ public class ManifestFileData {
     
     public String getNormalizedDatatype() {
         return this.getDatatype().toLowerCase().replace(" ", "_");
+    }
+    
+    public String getDataCategory() {
+        return dataCategory;
+    }
+    
+    public void setDataCategory(String dataCategory) {
+        this.dataCategory = dataCategory;
     }
 }

@@ -13,8 +13,8 @@ import org.cbio.gdcpipeline.model.GDCCase;
 
 
 /** TODO: The field names and getters/setters should be changed to camel case
- * at some point. This will require changing how the fields extractor in 
- * the writer functions 
+ * at some point. This will require changing how the fields extractor in
+ * the writer functions
  */
 public class Sample extends ClinicalDataModel {
     private String patient_id;
@@ -35,7 +35,7 @@ public class Sample extends ClinicalDataModel {
         this.primary_site = primary_site;
         this.tumor_stage = tumor_stage;
     }
-    
+
     public Sample(GDCCase gdcCase) {
         patient_id = gdcCase.getPatientId();
         sample_id = gdcCase.getSampleId();
