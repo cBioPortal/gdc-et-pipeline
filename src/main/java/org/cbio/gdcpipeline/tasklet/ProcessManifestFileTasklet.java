@@ -1,12 +1,8 @@
 package org.cbio.gdcpipeline.tasklet;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.cbio.gdcpipeline.model.ManifestFileData;
-import org.cbio.gdcpipeline.model.rest.response.GdcApiResponse;
-import org.cbio.gdcpipeline.model.rest.response.Hits;
 import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.tasklet.Tasklet;
@@ -20,38 +16,40 @@ import org.springframework.batch.item.file.transform.FieldSet;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
-import org.springframework.http.*;
-import org.springframework.web.client.RestTemplate;
-
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Set;
+import org.cbio.gdcpipeline.util.GraphQLQueryUtil;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
 
 /**
  * @author Dixit Patel
  */
 public class ProcessManifestFileTasklet implements Tasklet {
+    @Value("${gdc.graphql.endpoint}")
+    private String graphqlEndpoint;
+
     @Value("#{jobParameters[manifest_file]}")
-    private String manifest_file;
-
-    @Value("${gdc.api.files.endpoint}")
-    private String GDC_API_FILES_ENDPOINT;
-
-    @Value("${gdc.max.response.size}")
-    private int MAX_RESPONSE_SIZE;
+    private String manifestFile;
 
     private static Log LOG = LogFactory.getLog(ProcessManifestFileTasklet.class);
     private List<ManifestFileData> manifestFileList = new ArrayList<>();
-    private RestTemplate restTemplate = new RestTemplate();
-    private List<Hits> gdcFileMetadatas = new ArrayList<>();
+    private List<String> filenames = new ArrayList<>();
+    private Set<String> caseIds = new HashSet<>();
+    private JSONObject gdcResponse = new JSONObject();
+    private String GDC_FILTER_DATATYPE = "files";
+    private String GDC_FILTER_FIELD = "file_name";
 
     @Override
     public RepeatStatus execute(StepContribution stepContribution, ChunkContext chunkContext) throws Exception {
         FlatFileItemReader<ManifestFileData> reader = new FlatFileItemReader<>();
         DelimitedLineTokenizer tokenizer = new DelimitedLineTokenizer(DelimitedLineTokenizer.DELIMITER_TAB);
-        try (BufferedReader buff = new BufferedReader(new FileReader(manifest_file))) {
+        try (BufferedReader buff = new BufferedReader(new FileReader(manifestFile))) {
             // header line
             String header = buff.readLine();
             tokenizer.setNames(header.split(DelimitedLineTokenizer.DELIMITER_TAB));
@@ -59,7 +57,7 @@ public class ProcessManifestFileTasklet implements Tasklet {
         DefaultLineMapper<ManifestFileData> lineMapper = new DefaultLineMapper<>();
         lineMapper.setLineTokenizer(tokenizer);
         lineMapper.setFieldSetMapper(manifestFieldSetMapper());
-        reader.setResource(new FileSystemResource(manifest_file));
+        reader.setResource(new FileSystemResource(manifestFile));
         reader.setLineMapper(lineMapper);
         reader.setLinesToSkip(1);
         reader.open(new ExecutionContext());
@@ -67,19 +65,26 @@ public class ProcessManifestFileTasklet implements Tasklet {
         try {
             while ((record = reader.read()) != null) {
                 manifestFileList.add(record);
+                filenames.add(record.getFilename());
             }
         } catch (Exception e) {
             e.printStackTrace();
             throw new ItemStreamException("Error reading manifest record : "+record.toString());
         }
         reader.close();
-        String payload = buildJsonRequest();
-        gdcApiRequest(payload);
 
-        chunkContext.getStepContext()
-                .getStepExecution()
-                .getExecutionContext()
-                .put("gdcFileMetadatas", gdcFileMetadatas);
+        String query = "query FILES_EDGES($filters: FiltersArgument) {viewer" + 
+                "{repository {files {hits(filters: $filters, first:" + 
+                Integer.toString(filenames.size()) +") {total, edges {node {id," + 
+                " data_type, data_format, file_name, experimental_strategy," + 
+                " submitter_id, cases {hits {edges {node {submitter_id," + 
+                " submitter_sample_ids, case_id}}}}}}}}}}}";
+        gdcResponse = GraphQLQueryUtil.query(graphqlEndpoint, query, GDC_FILTER_DATATYPE, GDC_FILTER_FIELD, filenames);
+        processFilesResponse();
+
+        ExecutionContext ec = chunkContext.getStepContext().getStepExecution().getExecutionContext();
+        ec.put("caseIds", caseIds);
+        ec.put("gdcManifestData", manifestFileList);
 
         return RepeatStatus.FINISHED;
     }
@@ -101,86 +106,38 @@ public class ProcessManifestFileTasklet implements Tasklet {
         };
     }
 
-    /*  Payload format
-     * {
-     * "filters":{
-     *          "op":"in",
-     *          "content":{
-     *                  "field":"cases.case_id",
-     *                  "value":["ABC123"]
-     *                  }
-     *          },
-     * "format":"JSON",
-     * "fields":"file_name,cases.case_id,data_format",
-     *
-     * }
+    
+    /**
+     * Parses the json response from GDC graphql endpoint.
+     * Traverses the json to get the case_ids associated with all of the files
+     * in the manifest.
      */
+    private void processFilesResponse() {
+        JSONArray files = GraphQLQueryUtil.getQueryList(gdcResponse, "files");
 
-    protected String buildJsonRequest() {
-        JsonObject node = new JsonObject();
-        JsonObject filters = new JsonObject();
-        JsonObject content = new JsonObject();
-        JsonArray values = new JsonArray();
-        for (ManifestFileData record : manifestFileList) {
-            values.add(record.getId());
-        }
-        content.addProperty("field", "file_id");
-        content.add("value", values);
-        filters.addProperty("op", "in");
-        filters.add("content", content);
-
-        node.add("filters", filters);
-        node.addProperty("format", "JSON");
-        node.addProperty("fields", "file_id,file_name,cases.case_id,type,data_format");
-        return node.toString();
-    }
-
-    protected void gdcApiRequest(String payload) throws Exception {
-        int callCount = 0;
-        int totalCallCount = 1;
-        int from = 0;
-
-        while (callCount < totalCallCount) {
-            callCount += 1;
-            String url = GDC_API_FILES_ENDPOINT + "?from=" + from + "&size=" + MAX_RESPONSE_SIZE;
-            if (LOG.isInfoEnabled()) {
-                LOG.info(" Calling GDC API : " + url);
-                LOG.info(" Payload : " + payload);
-            }
-            GdcApiResponse res = callGdcApi(url, payload);
-            totalCallCount = res.getData().getPagination().getPages();
-            if (totalCallCount == 0) {
-                if (LOG.isErrorEnabled()) {
-                    LOG.error("Last API Request returned 0 results");
+        // TODO: Move this json traversing to a util class
+        for (Object edgeObject : files) {
+            JSONObject edge = (JSONObject) edgeObject;
+            // Get a list of all case ids from the manifest files
+            JSONObject node = (JSONObject) edge.get("node");
+            for (ManifestFileData manifestFileData : manifestFileList) {
+                String filename = (String) node.get("file_name");
+                if (manifestFileData.getFilename().equals(filename)) {
+                    manifestFileData.setSubmitterId((String)node.get("submitter_id"));
+                    manifestFileData.setSubmitterSampleIds((String)node.get("submitter_sample_ids"));
+                    manifestFileData.setDatatype((String) node.get("data_type"));
                 }
-                throw new Exception(" Last API Request returned 0 results ");
             }
-            gdcFileMetadatas.addAll(res.getData().getHits().stream().collect(Collectors.toList()));
-            from = callCount * MAX_RESPONSE_SIZE;
+            JSONObject cases = (JSONObject) node.get("cases");
+            JSONObject caseHits = (JSONObject) cases.get("hits");
+            JSONArray caseEdges = (JSONArray) caseHits.get("edges");
+            for (Object caseEdgeObject : caseEdges) {
+                JSONObject caseEdge = (JSONObject) caseEdgeObject;
+                JSONObject caseNode = (JSONObject) caseEdge.get("node");
+                caseIds.add((String)caseNode.get("case_id"));
+            }
         }
     }
 
-    protected GdcApiResponse callGdcApi(String url, String payload) throws Exception {
-        if (manifestFileList.isEmpty()) {
-            if (LOG.isErrorEnabled()) {
-                LOG.error(" No Case Id's to add to API call");
-            }
-            throw new Exception();
-        }
-        HttpHeaders httpHeaders = new HttpHeaders();
-        httpHeaders.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> entity = new HttpEntity<String>(payload.toString(), httpHeaders);
 
-        ResponseEntity<GdcApiResponse> response = restTemplate.exchange(url, HttpMethod.POST, entity, GdcApiResponse.class);
-        if (response.getStatusCode() != HttpStatus.OK) {
-            if (LOG.isErrorEnabled()) {
-                LOG.error("Error calling GDC API. Response code is :" + response.getStatusCode().toString()
-                        + " Response Message is : " + response.getStatusCode().getReasonPhrase());
-            }
-            throw new Exception();
-
-        }
-        return response.getBody();
-    }
 }
-

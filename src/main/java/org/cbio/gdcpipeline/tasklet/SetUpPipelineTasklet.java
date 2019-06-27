@@ -25,32 +25,16 @@ public class SetUpPipelineTasklet implements Tasklet {
     @Value("#{jobParameters[cancer_study_id]}")
     private String cancer_study_id;
 
-    private HashSet<String> supportedCancerStudy = new HashSet<>();
     private static Log LOG = LogFactory.getLog(SetUpPipelineTasklet.class);
 
     @Override
     public RepeatStatus execute(StepContribution stepContribution, ChunkContext chunkContext) throws Exception {
-        initiateCancerStudy();
-        validateCancerStudy();
         createOutputDirectory();
         validateSourceDirectory();
         if (LOG.isInfoEnabled()) {
             LOG.info(" ######### Pipeline Setup Completed #########");
         }
         return RepeatStatus.FINISHED;
-    }
-
-    private void initiateCancerStudy() {
-        supportedCancerStudy.add("TCGA_BRCA");
-    }
-
-    private void validateCancerStudy() throws Exception {
-        if (!supportedCancerStudy.contains(cancer_study_id)) {
-            if (LOG.isErrorEnabled()) {
-                LOG.error(" Invalid Cancer Study Type ");
-            }
-            throw new Exception();
-        }
     }
 
     private void validateSourceDirectory() throws FileNotFoundException {

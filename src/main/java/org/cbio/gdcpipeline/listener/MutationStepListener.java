@@ -2,7 +2,6 @@ package org.cbio.gdcpipeline.listener;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.cbio.gdcpipeline.model.rest.response.Hits;
 import org.cbio.gdcpipeline.util.CommonDataUtil;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.StepExecution;
@@ -10,8 +9,10 @@ import org.springframework.batch.core.StepExecutionListener;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.io.File;
+import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.List;
+import org.cbio.gdcpipeline.model.ManifestFileData;
 
 /**
  * @author Dixit Patel
@@ -31,8 +32,8 @@ public class MutationStepListener implements StepExecutionListener {
     @Value("#{jobParameters[outputDirectory]}")
     private String outputDir;
 
-    @Value("#{jobExecutionContext[gdcFileMetadatas]}")
-    private List<Hits> gdcFileMetadatas;
+    @Value("#{jobExecutionContext[gdcManifestData]}")
+    private List<ManifestFileData> gdcManifestData;
 
     @Value("#{jobParameters[separate_mafs]}")
     private String separate_mafs;
@@ -87,7 +88,25 @@ public class MutationStepListener implements StepExecutionListener {
     }
 
     public List<File> getMutationFileList() {
-        return CommonDataUtil.getFileList(gdcFileMetadatas, CommonDataUtil.GDC_TYPE.MUTATION, sourceDir);
+        List<File> mutationFileList = new ArrayList<>();
+        for (ManifestFileData dataFile : gdcManifestData) {
+            if (CommonDataUtil.GDC_TYPE.MUTATION.toString().equals(dataFile.getNormalizedDatatype())) {
+                Path path = Paths.get(sourceDir, dataFile.getId(), dataFile.getFilename());
+                File file = path.toFile();
+                mutationFileList.add(file);
+            }
+        }
+        try {
+            if (!mutationFileList.isEmpty()) {
+                mutationFileList = CommonDataUtil.extractCompressedFiles(mutationFileList);
+            }
+            else {
+                LOG.error("Mutation file list empty");
+            }
+        }
+        catch (Exception e) {
+            LOG.error("Could not extract maf files!");
+        }
+        return mutationFileList;
     }
-
 }

@@ -3,9 +3,6 @@ package org.cbio.gdcpipeline.reader;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.cbio.gdcpipeline.model.cbio.ClinicalDataModel;
-import org.cbio.gdcpipeline.model.cbio.Patient;
-import org.cbio.gdcpipeline.model.cbio.Sample;
-import org.cbio.gdcpipeline.model.gdc.nci.tcga.bcr.xml.clinical.brca._2.TcgaBcr;
 import org.cbio.gdcpipeline.model.rest.response.Hits;
 import org.cbio.gdcpipeline.util.CommonDataUtil;
 import org.springframework.batch.item.ExecutionContext;
@@ -13,13 +10,17 @@ import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.ItemStreamReader;
 import org.springframework.beans.factory.annotation.Value;
 
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Unmarshaller;
-import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+import org.cbio.gdcpipeline.util.GraphQLQueryUtil;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+
+import java.util.regex.*;
+import org.cbio.gdcpipeline.model.GDCCase;
+import org.cbio.gdcpipeline.model.cbio.Patient;
+import org.cbio.gdcpipeline.model.cbio.Sample;
 
 /**
  * @author Dixit Patel
@@ -27,25 +28,23 @@ import java.util.Map;
 public class ClinicalReader implements ItemStreamReader<ClinicalDataModel> {
     private static Log LOG = LogFactory.getLog(ClinicalReader.class);
 
-    @Value("#{jobExecutionContext[barcodeToSamplesMap]}")
-    private Map<String, List<String>> barcodeToSamplesMap;
+    @Value("${gdc.graphql.endpoint}")
+    private String graphqlEndpoint;
 
-    @Value("#{jobExecutionContext[gdcFileMetadatas]}")
-    private List<Hits> gdcFileMetadatas;
+    @Value("#{jobExecutionContext[caseIds]}")
+    private List<String> caseIds;
 
     @Value("#{jobParameters[filter_normal_sample]}")
-    private String filter_normal_sample_flag;
-
-    @Value("#{jobParameters[sourceDirectory]}")
-    private String sourceDir;
-
-    @Value("#{jobParameters[cancer_study_id]}")
-    private String cancer_study_id;
-
-    @Value("${onco.code.tcga.brca}")
-    private String oncotree_code;
+    private String filterNormalSampleFlag;
 
     private List<ClinicalDataModel> clinicalDataModelList = new ArrayList<>();
+    private JSONObject gdcResponse = new JSONObject();
+    private String GDC_FILTER_DATATYPE = "cases";
+    private String GDC_FILTER_FIELD = "case_id";
+
+
+    public static final Pattern TCGA_SAMPLE_BARCODE_REGEX =
+        Pattern.compile("^(TCGA-\\w\\w-\\w\\w\\w\\w-\\d\\d).*$");
 
     @Override
     public ClinicalDataModel read() throws Exception {
@@ -57,78 +56,24 @@ public class ClinicalReader implements ItemStreamReader<ClinicalDataModel> {
 
     @Override
     public void open(ExecutionContext executionContext) throws ItemStreamException {
-        List<File> clinicalFileNames = getClinicalFileList();
-        if (!clinicalFileNames.isEmpty()) {
-            for (File clinicalFile : clinicalFileNames) {
-                if (LOG.isInfoEnabled()) {
-                    LOG.info("Processing Clinical file : " + clinicalFile.getName());
-                }
-                try {
-                    TcgaBcr tcgaBcr = unmarshall(clinicalFile);
-                    addData(tcgaBcr);
-                } catch (JAXBException e) {
-                    if (LOG.isErrorEnabled()) {
-                        LOG.error("Unmarshalling error. Skipping file " + clinicalFile.getName());
-                    }
-                }
-            }
-        } else {
-            if (LOG.isInfoEnabled()) {
-                LOG.info(" No Clinincal Files Found");
-            }
+        String query = "query CASES($filters: FiltersArgument) { viewer " + 
+                "{repository {cases {hits(filters: $filters, first: " + 
+                Integer.toString(caseIds.size()) + ") {edges {node {sample_ids," + 
+                "submitter_id,submitter_analyte_ids,case_id,disease_type," + 
+                "primary_site,demographic {gender,year_of_birth,demographic_id," + 
+                "race,ethnicity,year_of_death,days_to_birth,days_to_death," + 
+                "vital_status,id},diagnoses {hits {edges {node {tumor_grade," + 
+                "tumor_stage,days_to_last_follow_up,year_of_diagnosis}}}}," + 
+                "samples {hits {edges {node {sample_type_id,sample_type,submitter_id}}}}}}}}}}}";
+        try {
+            gdcResponse = GraphQLQueryUtil.query(graphqlEndpoint, query, GDC_FILTER_DATATYPE, GDC_FILTER_FIELD, caseIds);
         }
-    }
-
-    private TcgaBcr unmarshall(File xmlFile) throws JAXBException {
-        JAXBContext jaxbContext = JAXBContext.newInstance(TcgaBcr.class);
-        Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
-        // root
-        TcgaBcr tcgaBcr = (TcgaBcr) unmarshaller.unmarshal(xmlFile);
-        return tcgaBcr;
-    }
-
-    private void addData(TcgaBcr tcgaBcr) {
-        String barcode = tcgaBcr.getPatient().getBcrPatientBarcode().getValue();
-        if (!barcodeToSamplesMap.containsKey(barcode)) {
-            if (LOG.isErrorEnabled()) {
-                LOG.error("Biospecimen file for Barcode : " + barcode + " does not exist. Skipping File");
-            }
-        } else {
-            List<String> sampleList = barcodeToSamplesMap.get(barcode);
-            // patient
-            ClinicalDataModel patient = new Patient(
-                    barcode,
-                    tcgaBcr.getPatient().getVitalStatus().getValue(),
-                    tcgaBcr.getPatient().getGender().getValue(),
-                    Integer.parseInt(tcgaBcr.getPatient().getAgeAtInitialPathologicDiagnosis().getValue()));
-            this.clinicalDataModelList.add(patient);
-
-            //sample
-            for (String sample_id : sampleList) {
-                if (!(filter_normal_sample_flag.equalsIgnoreCase("true") && sample_id.endsWith(CommonDataUtil.NORMAL_SAMPLE_SUFFIX))) {
-                    this.clinicalDataModelList.add(new Sample(tcgaBcr.getPatient().getBcrPatientBarcode().getValue(), sample_id, oncotree_code));
-                }
-            }
+        catch (IOException e) {
+            LOG.error("Failed to query graphql for cases!");
         }
-    }
+        LOG.info("Finished graphql for cases.");
 
-    private List<File> getClinicalFileList() throws ItemStreamException {
-        List<File> clincalFiles = new ArrayList<>();
-            if (!gdcFileMetadatas.isEmpty()) {
-            for (Hits data : gdcFileMetadatas) {
-                if (data.getType().equals(CommonDataUtil.GDC_TYPE.CLINICAL.toString())) {
-                    File file = new File(sourceDir, data.getFile_name());
-                    if (file.exists()) {
-                        clincalFiles.add(file);
-                    } else {
-                        if (LOG.isInfoEnabled()) {
-                            LOG.info("Clinical File : " + file.getAbsolutePath() + " not found.\nSkipping File");
-                        }
-                    }
-                }
-            }
-        }
-        return clincalFiles;
+        processCasesResponse();
     }
 
     @Override
@@ -137,5 +82,14 @@ public class ClinicalReader implements ItemStreamReader<ClinicalDataModel> {
 
     @Override
     public void close() throws ItemStreamException {
+    }
+
+    private void processCasesResponse() {
+        JSONArray cases = GraphQLQueryUtil.getQueryList(gdcResponse, "cases");
+        for (Object caseObject : cases) {
+            GDCCase gdcCase = new GDCCase((JSONObject) caseObject, filterNormalSampleFlag);
+            this.clinicalDataModelList.add(new Sample(gdcCase));
+            this.clinicalDataModelList.add(new Patient(gdcCase));
+        }
     }
 }

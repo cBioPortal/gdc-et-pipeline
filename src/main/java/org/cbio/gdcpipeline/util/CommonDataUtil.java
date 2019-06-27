@@ -15,7 +15,7 @@ import java.util.zip.GZIPInputStream;
  * @author Dixit Patel
  */
 public class CommonDataUtil {
-    public static final String NORMAL_SAMPLE_SUFFIX = "-10";
+    public static final String NORMAL_SAMPLE_SUFFIX = "10";
     private static Log LOG = LogFactory.getLog(CommonDataUtil.class);
     public enum CLINICAL_TYPE{PATIENT,SAMPLE}
     private static String SYSTEM_TMP_DIR_PROPERTY = "java.io.tmpdir";
@@ -110,79 +110,50 @@ public class CommonDataUtil {
         }
     }
 
-    public static List<File> getFileList(List<Hits> gdcFileMetadatas, CommonDataUtil.GDC_TYPE type, String sourceDir) {
-        List<File> fileList = new ArrayList<>();
-        List<File> compressedFiles = new ArrayList<>();
-        if (!gdcFileMetadatas.isEmpty()) {
-            for (Hits data : gdcFileMetadatas) {
-                if (data.getType().equals(type.toString())) {
-                    File file = new File(sourceDir, data.getFile_name());
-                    if (file.exists()) {
-                        if (isCompressedFile(file)) {
-                            compressedFiles.add(file);
-                        } else {
-                            fileList.add(file);
-                        }
-                    } else {
-                        if (LOG.isInfoEnabled()) {
-                            LOG.info(type.toString() + " file : " + file.getAbsolutePath() + " not found.\nSkipping File");
-                        }
-                    }
-                }
-            }
-        }
-        if (!compressedFiles.isEmpty()) {
-            try {
-                fileList.addAll(extractCompressedFiles(compressedFiles));
-            } catch (Exception e) {
-                e.printStackTrace();
-                if (LOG.isErrorEnabled()) {
-                    LOG.error("Skipping files to extract.");
-                }
-            }
-        }
-        return fileList;
-    }
-
     public static List<File> extractCompressedFiles(List<File> fileList) throws Exception {
         temp_dir = createTempDirectory();
         List<File> extracted = new ArrayList<>();
         if (!fileList.isEmpty()) {
             for (File extractFile : fileList) {
-                if (isCompressedFile(extractFile)) {
-                    File tmp_file;
-                    try {
-                        tmp_file = File.createTempFile(extractFile.getName(), "", temp_dir);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        if (LOG.isErrorEnabled()) {
-                            LOG.error("Error creating temp file in : " + temp_dir.getAbsolutePath() + "\nSkipping File");
-                        }
-                        continue;
-                    }
-                    try {
-                        BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(tmp_file));
-                        FileInputStream fis = new FileInputStream(extractFile);
-                        if (extractFile.getName().endsWith(COMPRESSION_FORMAT.GZIP.toString())) {
-                            GZIPInputStream gzip = new GZIPInputStream(new BufferedInputStream(fis));
-                            int readByte;
-                            while ((readByte = gzip.read()) > 0) {
-                                bos.write(readByte);
-                            }
-                            gzip.close();
-                            Path path = Files.move(Paths.get(tmp_file.getAbsolutePath()), Paths.get(temp_dir.getAbsolutePath(), extractFile.getName().replace(COMPRESSION_FORMAT.GZIP.toString(), "")));
-                            extracted.add(new File(path.toUri()));
-                        }
-                        bos.close();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        deleteTempDir();
-                        throw new Exception("Error while decompressing files");
-                    }
-                }
+                extracted.add(extractCompressedFile(extractFile));
             }
         }
         return extracted;
+    }
+    
+    public static File extractCompressedFile(File extractFile) throws Exception {
+        if (isCompressedFile(extractFile)) {
+            File tmp_file;
+            try {
+                tmp_file = File.createTempFile(extractFile.getName(), "", temp_dir);
+            } catch (IOException e) {
+                e.printStackTrace();
+                if (LOG.isErrorEnabled()) {
+                    LOG.error("Error creating temp file in : " + temp_dir.getAbsolutePath() + "\nSkipping File");
+                }
+                return extractFile;
+            }
+            try {
+                BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(tmp_file));
+                FileInputStream fis = new FileInputStream(extractFile);
+                if (extractFile.getName().endsWith(COMPRESSION_FORMAT.GZIP.toString())) {
+                    GZIPInputStream gzip = new GZIPInputStream(new BufferedInputStream(fis));
+                    int readByte;
+                    while ((readByte = gzip.read()) > 0) {
+                        bos.write(readByte);
+                    }
+                    gzip.close();
+                    Path path = Files.move(Paths.get(tmp_file.getAbsolutePath()), Paths.get(temp_dir.getAbsolutePath(), extractFile.getName().replace(COMPRESSION_FORMAT.GZIP.toString(), "")));
+                    return new File(path.toUri());
+                }
+                bos.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+                deleteTempDir();
+                throw new Exception("Error while decompressing files");                
+            }
+        }
+        return extractFile;   
     }
 
     private static boolean isCompressedFile(File extractFile) {

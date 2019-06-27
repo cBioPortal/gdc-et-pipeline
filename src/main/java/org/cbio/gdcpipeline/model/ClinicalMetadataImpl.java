@@ -5,6 +5,9 @@ import java.util.*;
 /**
  * @author Dixit Patel
  */
+
+// TODO: This class should be replaced with dynamic calls to the data dictionary api
+// oncotree.mskcc.org/cdd/swagger-ui.html
 public class ClinicalMetadataImpl implements MetadataManager {
     private Map<String, String> displayNames = new HashMap<>();
     private Map<String, String> description = new HashMap<>();
@@ -48,6 +51,9 @@ public class ClinicalMetadataImpl implements MetadataManager {
         this.displayNames.put("OS_STATUS", "Overall Survival Status");
         this.displayNames.put("SEX", "Sex");
         this.displayNames.put("AGE", "Age");
+        this.displayNames.put("SAMPLE_TYPE", "Sample Type");
+        this.displayNames.put("PRIMARY_SITE", "Primary Tumor Site");
+        this.displayNames.put("CANCER_TYPE", "Cancer Type");
     }
 
     private void setDescription() {
@@ -57,6 +63,9 @@ public class ClinicalMetadataImpl implements MetadataManager {
         this.description.put("OS_STATUS", "Overall Survival Status");
         this.description.put("SEX", "Sex");
         this.description.put("AGE", "Age");
+        this.description.put("SAMPLE_TYPE", "The type of sample (i.e., normal, primary, met, recurrence).");
+        this.description.put("PRIMARY_SITE", "Text term to describe the organ sub-division in an individual with cancer.");
+        this.description.put("CANCER_TYPE", "Cancer Type");
     }
 
     private void setDatatype() {
@@ -66,6 +75,9 @@ public class ClinicalMetadataImpl implements MetadataManager {
         this.datatype.put("OS_STATUS", "STRING");
         this.datatype.put("SEX", "STRING");
         this.datatype.put("AGE", "NUMBER");
+        this.datatype.put("SAMPLE_TYPE", "STRING");
+        this.datatype.put("PRIMARY_SITE", "STRING");
+        this.datatype.put("CANCER_TYPE", "STRING");
     }
 
     private void setPriority() {
@@ -75,5 +87,8 @@ public class ClinicalMetadataImpl implements MetadataManager {
         this.priority.put("OS_STATUS", "1");
         this.priority.put("SEX", "1");
         this.priority.put("AGE", "1");
+        this.priority.put("SAMPLE_TYPE", "9");
+        this.priority.put("PRIMARY_SITE", "1");
+        this.priority.put("CANCER_TYPE", "1");
     }
 }
