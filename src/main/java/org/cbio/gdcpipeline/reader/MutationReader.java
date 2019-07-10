@@ -40,9 +40,6 @@ public class MutationReader implements ItemStreamReader<MutationRecord> {
     @Value("#{jobParameters[outputDirectory]}")
     private String outputDir;
 
-    @Value("#{jobParameters[cancer_study_id]}")
-    private String cancer_study_id;
-
     @Value("#{jobParameters[separate_mafs]}")
     private String separate_mafs;
 

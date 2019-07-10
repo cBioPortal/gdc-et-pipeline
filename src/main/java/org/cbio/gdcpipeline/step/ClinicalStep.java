@@ -49,7 +49,7 @@ public class ClinicalStep {
 
     @Bean
     public ExecutionContextPromotionListener clinicalDataListener() {
-        String[] keys = new String[]{"barcodeToSamplesMap"};
+        String[] keys = new String[]{"sampleIds", "gdcIdToSampleId", "gdcAliquotIdToSampleId", "gdcUUIDToSampleId"};
         ExecutionContextPromotionListener executionContextPromotionListener = new ExecutionContextPromotionListener();
         executionContextPromotionListener.setKeys(keys);
         return executionContextPromotionListener;

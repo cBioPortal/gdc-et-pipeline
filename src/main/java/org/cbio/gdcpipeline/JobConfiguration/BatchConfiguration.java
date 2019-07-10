@@ -50,6 +50,12 @@ public class BatchConfiguration {
     @Resource(name = "mutationMetaDataStep")
     Step mutationMetaDataStep;
 
+    @Resource(name = "cnaDataStep")
+    Step cnaDataStep;
+
+//    @Resource(name = "cnaMetaDataStep")
+//    Step cnaMetaDataStep;
+
     @Value("${chunk.interval}")
     private int chunkInterval;
 
@@ -107,10 +113,19 @@ public class BatchConfiguration {
     }
 
     @Bean
+    public Flow cnaDataFlow() {
+        return new FlowBuilder<Flow>("cnaDataFlow")
+                .start(cnaDataStep)
+//                .next(cnaMetaDataStep)
+                .build();
+    }
+
+    @Bean
     public Flow gdcAllDatatypesFlow() {
         return new FlowBuilder<Flow>("gdcAllDatatypesFlow")
                 .start(clinicalDataFlow())
-                .next(mutationDataFlow())
+                //.next(mutationDataFlow())
+                .next(cnaDataFlow())
                 .build();
     }
 
@@ -128,6 +143,7 @@ public class BatchConfiguration {
                 .on(StepDecider.STEP.ALL.toString()).to(gdcAllDatatypesFlow())
                 .from(stepDecider()).on(StepDecider.STEP.CLINICAL.toString()).to(clinicalDataFlow())
                 .from(stepDecider()).on(StepDecider.STEP.MUTATION.toString()).to(mutationDataFlow())
+                .from(stepDecider()).on(StepDecider.STEP.CNA.toString()).to(cnaDataFlow())
                 .build();
     }
 
