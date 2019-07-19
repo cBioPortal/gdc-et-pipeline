@@ -2,8 +2,6 @@ package org.cbio.gdcpipeline.step;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.cbio.gdcpipeline.model.cbio.CnaRecord;
-import org.cbio.gdcpipeline.processor.CnaProcessor;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
@@ -13,15 +11,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.cbio.gdcpipeline.reader.CnaReader;
-import org.cbio.gdcpipeline.writer.CnaWriter;
+import org.cbio.gdcpipeline.reader.ExpressionReader;
+import org.cbio.gdcpipeline.writer.ExpressionWriter;
 
 /**
  * @author heinsz
  */
 @EnableBatchProcessing
 @Configuration
-public class CnaStep {
+public class ExpressionStep {
     @Autowired
     StepBuilderFactory stepBuilderFactory;
 
@@ -35,29 +33,23 @@ public class CnaStep {
 
     @Bean
     @StepScope
-    public CnaReader cnaReader() {
-        return new CnaReader();
+    public ExpressionReader expressionReader() {
+        return new ExpressionReader();
     }
 
     @Bean
     @StepScope
-    public CnaProcessor cnaProcessor() {
-        return new CnaProcessor();
+    public ExpressionWriter expressionWriter() {
+        return new ExpressionWriter();
     }
 
-    @Bean
-    @StepScope
-    public CnaWriter cnaWriter() {
-        return new CnaWriter();
-    }
 
     @Bean
-    public Step cnaDataStep() {
-        return stepBuilderFactory.get("cnaDataStep")
-                .<CnaRecord, CnaRecord>chunk(chunkInterval)
-                .reader(cnaReader())
-                .processor(cnaProcessor())
-                .writer(cnaWriter())
+    public Step expressionDataStep() {
+        return stepBuilderFactory.get("expressionDataStep")
+                .<String, String>chunk(chunkInterval)
+                .reader(expressionReader())
+                .writer(expressionWriter())
                 .build();
     }
 }

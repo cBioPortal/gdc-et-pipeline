@@ -75,7 +75,7 @@ public class ProcessManifestFileTasklet implements Tasklet {
         String query = "query FILES_EDGES($filters: FiltersArgument) {viewer" + 
                 "{repository {files {hits(filters: $filters, first:" + 
                 Integer.toString(filenames.size()) +") {total, edges {node {id," + 
-                " data_type, data_format, file_name, experimental_strategy," + 
+                " data_type, data_format, file_name, experimental_strategy, data_category, analysis {workflow_type}," + 
                 " submitter_id, cases {hits {edges {node {submitter_id," + 
                 " submitter_sample_ids, case_id}}}}}}}}}}}";
         gdcResponse = GraphQLQueryUtil.query(graphqlEndpoint, query, GDC_FILTER_DATATYPE, GDC_FILTER_FIELD, filenames);
@@ -115,7 +115,7 @@ public class ProcessManifestFileTasklet implements Tasklet {
 
         // TODO: Move this json traversing to a util class
         for (Object edgeObject : files) {
-            JSONObject edge = (JSONObject) edgeObject;
+             JSONObject edge = (JSONObject) edgeObject;
             // Get a list of all case ids from the manifest files
             JSONObject node = (JSONObject) edge.get("node");
             for (ManifestFileData manifestFileData : manifestFileList) {
@@ -125,15 +125,19 @@ public class ProcessManifestFileTasklet implements Tasklet {
                     manifestFileData.setSubmitterSampleIds((String)node.get("submitter_sample_ids"));
                     manifestFileData.setDatatype((String) node.get("data_type"));
                     manifestFileData.setDataCategory((String) node.get("data_category"));
+                    JSONObject analysis = (JSONObject) node.get("analysis");
+                    manifestFileData.setWorkflowType((String) analysis.get("workflow_type"));
+                    JSONObject cases = (JSONObject) node.get("cases");
+                    JSONObject caseHits = (JSONObject) cases.get("hits");
+                    JSONArray caseEdges = (JSONArray) caseHits.get("edges");
+                    for (Object caseEdgeObject : caseEdges) {
+                        JSONObject caseEdge = (JSONObject) caseEdgeObject;
+                        JSONObject caseNode = (JSONObject) caseEdge.get("node");
+                        String caseId = (String) caseNode.get("case_id");
+                        caseIds.add(caseId);
+                        manifestFileData.addSampleId(caseId);
+                    }                    
                 }
-            }
-            JSONObject cases = (JSONObject) node.get("cases");
-            JSONObject caseHits = (JSONObject) cases.get("hits");
-            JSONArray caseEdges = (JSONArray) caseHits.get("edges");
-            for (Object caseEdgeObject : caseEdges) {
-                JSONObject caseEdge = (JSONObject) caseEdgeObject;
-                JSONObject caseNode = (JSONObject) caseEdge.get("node");
-                caseIds.add((String)caseNode.get("case_id"));
             }
         }
     }

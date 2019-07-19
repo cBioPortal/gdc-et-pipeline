@@ -16,6 +16,8 @@ public class ManifestFileData {
     private String submitterSampleIds;
     private String datatype;
     private String dataCategory;
+    private String workflowType;
+    private List<String> sampleIds = new ArrayList<>();
 
     public List<String> getHeader(){
         List<String> header = new ArrayList<>();
@@ -100,5 +102,26 @@ public class ManifestFileData {
     
     public void setDataCategory(String dataCategory) {
         this.dataCategory = dataCategory;
+    }
+    
+    public String getWorkflowType() {
+        return workflowType;
+    }
+    
+    public void setWorkflowType(String workflowType) {
+        this.workflowType = workflowType;
+    }
+    
+    public List<String> getSampleIds() {
+        return sampleIds;
+    }
+    
+    public void setSampleIds(List<String> sampleIds) {
+        this.sampleIds.clear();
+        this.sampleIds.addAll(sampleIds);    
+    }
+    
+    public void addSampleId(String sampleId) {
+        sampleIds.add(sampleId);
     }
 }

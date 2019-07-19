@@ -65,7 +65,8 @@ public class CommonDataUtil {
         BIOSPECIMEN("biospecimen_supplement"),
         CLINICAL("clinical_supplement"),
         MUTATION("masked_somatic_mutation"),
-        CNA("gene_level_copy_number_scores");
+        CNA("gene_level_copy_number_scores"),
+        EXPRESSION("gene_expression_quantification");
 
         private final String type;  
 
@@ -123,6 +124,7 @@ public class CommonDataUtil {
     }
     
     public static File extractCompressedFile(File extractFile) throws Exception {
+        temp_dir = createTempDirectory();
         if (isCompressedFile(extractFile)) {
             File tmp_file;
             try {
@@ -135,19 +137,20 @@ public class CommonDataUtil {
                 return extractFile;
             }
             try {
-                BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(tmp_file));
+                FileOutputStream fos = new FileOutputStream(tmp_file);
                 FileInputStream fis = new FileInputStream(extractFile);
                 if (extractFile.getName().endsWith(COMPRESSION_FORMAT.GZIP.toString())) {
-                    GZIPInputStream gzip = new GZIPInputStream(new BufferedInputStream(fis));
+                    GZIPInputStream gzip = new GZIPInputStream(fis);
+                    byte[] buffer = new byte[1024];
                     int readByte;
-                    while ((readByte = gzip.read()) > 0) {
-                        bos.write(readByte);
-                    }
+                    while ((readByte = gzip.read(buffer)) > 0) {
+                        fos.write(buffer, 0, readByte);
+                    }   
                     gzip.close();
                     Path path = Files.move(Paths.get(tmp_file.getAbsolutePath()), Paths.get(temp_dir.getAbsolutePath(), extractFile.getName().replace(COMPRESSION_FORMAT.GZIP.toString(), "")));
                     return new File(path.toUri());
                 }
-                bos.close();
+                fos.close();
             } catch (Exception e) {
                 e.printStackTrace();
                 deleteTempDir();
@@ -182,7 +185,7 @@ public class CommonDataUtil {
             }
             deleteDir(tmp_dir);
         }
-        tmp_dir.mkdir();
+            tmp_dir.mkdir();
         return tmp_dir;
     }
 
