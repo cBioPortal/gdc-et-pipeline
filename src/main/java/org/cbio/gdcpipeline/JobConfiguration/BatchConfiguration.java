@@ -23,6 +23,7 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 
 import javax.annotation.Resource;
+import org.cbio.gdcpipeline.util.GenomeNexusCache;
 
 /**
  * @author Dixit Patel
@@ -53,8 +54,12 @@ public class BatchConfiguration {
     @Resource(name = "cnaDataStep")
     Step cnaDataStep;
 
+    // TODO: Add metadata files for CNA and Expression
 //    @Resource(name = "cnaMetaDataStep")
 //    Step cnaMetaDataStep;
+    
+    @Resource(name = "expressionDataStep")
+    Step expressionDataStep;
 
     @Value("${chunk.interval}")
     private int chunkInterval;
@@ -64,6 +69,11 @@ public class BatchConfiguration {
         return stepBuilderFactory.get("setUpPipeline")
                 .tasklet(setUpPipelineTasklet())
                 .build();
+    }
+    
+    @Bean
+    public GenomeNexusCache genomeNexusCache() {
+        return new GenomeNexusCache();
     }
 
     @Bean
@@ -119,13 +129,22 @@ public class BatchConfiguration {
 //                .next(cnaMetaDataStep)
                 .build();
     }
+    
+    @Bean
+    public Flow expressionDataFlow() {
+        return new FlowBuilder<Flow>("expressionDataFlow")
+                .start(expressionDataStep)
+                //.next(expressionMetaDataStep)
+                .build();
+    }
 
     @Bean
     public Flow gdcAllDatatypesFlow() {
         return new FlowBuilder<Flow>("gdcAllDatatypesFlow")
                 .start(clinicalDataFlow())
-                //.next(mutationDataFlow())
+                .next(mutationDataFlow())
                 .next(cnaDataFlow())
+                .next(expressionDataFlow())     
                 .build();
     }
 
@@ -144,6 +163,7 @@ public class BatchConfiguration {
                 .from(stepDecider()).on(StepDecider.STEP.CLINICAL.toString()).to(clinicalDataFlow())
                 .from(stepDecider()).on(StepDecider.STEP.MUTATION.toString()).to(mutationDataFlow())
                 .from(stepDecider()).on(StepDecider.STEP.CNA.toString()).to(cnaDataFlow())
+                .from(stepDecider()).on(StepDecider.STEP.EXPRESSION.toString()).to(expressionDataFlow())
                 .build();
     }
 
