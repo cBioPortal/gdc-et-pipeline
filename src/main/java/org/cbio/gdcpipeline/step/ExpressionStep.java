@@ -12,7 +12,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.cbio.gdcpipeline.reader.ExpressionReader;
+import org.cbio.gdcpipeline.tasklet.ExpressionMetaDataTasklet;
 import org.cbio.gdcpipeline.writer.ExpressionWriter;
+import org.springframework.batch.core.step.tasklet.Tasklet;
 
 /**
  * @author heinsz
@@ -43,13 +45,25 @@ public class ExpressionStep {
         return new ExpressionWriter();
     }
 
-
     @Bean
     public Step expressionDataStep() {
         return stepBuilderFactory.get("expressionDataStep")
                 .<String, String>chunk(chunkInterval)
                 .reader(expressionReader())
                 .writer(expressionWriter())
+                .build();
+    }
+    
+    @Bean
+    @StepScope
+    public Tasklet expressionMetaDataTasklet() {
+        return new ExpressionMetaDataTasklet();
+    }
+    
+    @Bean
+    public Step expressionMetaDataStep() {
+        return stepBuilderFactory.get("expressionMetaDataStep")
+                .tasklet(expressionMetaDataTasklet())
                 .build();
     }
 }
