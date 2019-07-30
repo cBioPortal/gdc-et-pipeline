@@ -14,7 +14,6 @@ import java.io.File;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  *@author Dixit Patel
@@ -48,7 +47,7 @@ public class MutationMetadataTasklet implements Tasklet {
         mutationMetadata.put("profile_name","Mutations");
         mutationMetadata.put("data_filename", StringUtils.join(MUTATION_DATA_FILES,','));
 
-        MetaFileWriter.writeMetadata(mutationMetadata,metafile);
+        MetaFileWriter.writeMetadata(mutationMetadata, metafile);
         return RepeatStatus.FINISHED;
     }
 }
