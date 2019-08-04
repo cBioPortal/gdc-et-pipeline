@@ -57,7 +57,7 @@ public class BatchConfiguration {
     // TODO: Add metadata files for CNA and Expression
 //    @Resource(name = "cnaMetaDataStep")
 //    Step cnaMetaDataStep;
-    
+
     @Resource(name = "expressionDataStep")
     Step expressionDataStep;
 
@@ -70,7 +70,7 @@ public class BatchConfiguration {
                 .tasklet(setUpPipelineTasklet())
                 .build();
     }
-    
+
     @Bean
     public GenomeNexusCache genomeNexusCache() {
         return new GenomeNexusCache();
@@ -129,7 +129,7 @@ public class BatchConfiguration {
 //                .next(cnaMetaDataStep)
                 .build();
     }
-    
+
     @Bean
     public Flow expressionDataFlow() {
         return new FlowBuilder<Flow>("expressionDataFlow")
@@ -144,7 +144,7 @@ public class BatchConfiguration {
                 .start(clinicalDataFlow())
                 .next(mutationDataFlow())
                 .next(cnaDataFlow())
-                .next(expressionDataFlow())     
+                .next(expressionDataFlow())
                 .build();
     }
 

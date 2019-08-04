@@ -16,6 +16,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.List;
+import java.util.ArrayList;
 import org.apache.commons.lang.StringUtils;
 
 /**
@@ -63,8 +64,10 @@ public class MutationWriter implements ItemStreamWriter<AnnotatedRecord> {
     private FieldExtractor<AnnotatedRecord> createFieldExtractor(AnnotatedRecord data) {
         BeanWrapperFieldExtractor<AnnotatedRecord> ext = new BeanWrapperFieldExtractor<>();
         List<String> fieldList = data.getHeaderWithAdditionalFields();
-        String[] fields = new String[fieldList.size()];
-        fields = data.getHeaderWithAdditionalFields().toArray(fields);
+        List<String> fieldsUpperCase = new ArrayList<>();
+        fieldList.forEach((item) -> fieldsUpperCase.add(item.toUpperCase()));
+        String[] fields = new String[fieldsUpperCase.size()];
+        fields = fieldsUpperCase.toArray(fields);
         ext.setNames(fields);
         return ext;
     }
