@@ -54,12 +54,14 @@ public class BatchConfiguration {
     @Resource(name = "cnaDataStep")
     Step cnaDataStep;
 
-    // TODO: Add metadata files for CNA and Expression
-//    @Resource(name = "cnaMetaDataStep")
-//    Step cnaMetaDataStep;
+    @Resource(name = "cnaMetaDataStep")
+    Step cnaMetaDataStep;
 
     @Resource(name = "expressionDataStep")
     Step expressionDataStep;
+    
+    @Resource(name = "expressionMetaDataStep")
+    Step expressionMetaDataStep;
 
     @Value("${chunk.interval}")
     private int chunkInterval;
@@ -126,7 +128,7 @@ public class BatchConfiguration {
     public Flow cnaDataFlow() {
         return new FlowBuilder<Flow>("cnaDataFlow")
                 .start(cnaDataStep)
-//                .next(cnaMetaDataStep)
+                .next(cnaMetaDataStep)
                 .build();
     }
 
@@ -134,7 +136,7 @@ public class BatchConfiguration {
     public Flow expressionDataFlow() {
         return new FlowBuilder<Flow>("expressionDataFlow")
                 .start(expressionDataStep)
-                //.next(expressionMetaDataStep)
+                .next(expressionMetaDataStep)
                 .build();
     }
 

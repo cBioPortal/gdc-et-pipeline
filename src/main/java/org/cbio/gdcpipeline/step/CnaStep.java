@@ -14,7 +14,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.cbio.gdcpipeline.reader.CnaReader;
+import org.cbio.gdcpipeline.tasklet.CnaMetaDataTasklet;
 import org.cbio.gdcpipeline.writer.CnaWriter;
+import org.springframework.batch.core.step.tasklet.Tasklet;
 
 /**
  * @author heinsz
@@ -58,6 +60,19 @@ public class CnaStep {
                 .reader(cnaReader())
                 .processor(cnaProcessor())
                 .writer(cnaWriter())
+                .build();
+    }
+    
+    @Bean
+    @StepScope
+    public Tasklet cnaMetaDataTasklet() {
+        return new CnaMetaDataTasklet();
+    }
+    
+    @Bean
+    public Step cnaMetaDataStep() {
+        return stepBuilderFactory.get("cnaMetaDataStep")
+                .tasklet(cnaMetaDataTasklet())
                 .build();
     }
 }
