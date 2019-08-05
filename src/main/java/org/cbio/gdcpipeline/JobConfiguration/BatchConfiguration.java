@@ -72,7 +72,7 @@ public class BatchConfiguration {
                 .tasklet(setUpPipelineTasklet())
                 .build();
     }
-    
+
     @Bean
     public GenomeNexusCache genomeNexusCache() {
         return new GenomeNexusCache();
@@ -131,7 +131,7 @@ public class BatchConfiguration {
                 .next(cnaMetaDataStep)
                 .build();
     }
-    
+
     @Bean
     public Flow expressionDataFlow() {
         return new FlowBuilder<Flow>("expressionDataFlow")
@@ -146,7 +146,7 @@ public class BatchConfiguration {
                 .start(clinicalDataFlow())
                 .next(mutationDataFlow())
                 .next(cnaDataFlow())
-                .next(expressionDataFlow())     
+                .next(expressionDataFlow())
                 .build();
     }
 
