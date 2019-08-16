@@ -39,28 +39,29 @@ public class ExpressionReader implements ItemStreamReader<String> {
 
     @Value("#{jobParameters[sourceDirectory]}")
     private String sourceDir;
-    
+
     @Value("#{jobExecutionContext[gdcManifestData]}")
     private List<ManifestFileData> gdcManifestData;
-    
+
     @Value("#{jobExecutionContext[gdcAliquotIdToSampleId]}")
     private Map<String, String> gdcAliquotIdToSampleId;
-    
+
     @Value("#{jobExecutionContext[gdcIdToSampleId]}")
     private Map<String, String> gdcIdToSampleId;
 
     @Value("#{jobExecutionContext[gdcUUIDToSampleId]}")
-    private Map<String, String> gdcUUIDToSampleId;   
-    
+    private Map<String, String> gdcUUIDToSampleId;
+
     @Autowired
     GenomeNexusCache genomeNexusCache;
 
     private List<String> expressionRecords = new ArrayList<>();
     private MultiKeyMap expressionMap = new MultiKeyMap();
     private Set<String> genes = new HashSet<>();
+    private Set<String> samplesSeen = new HashSet();
     private List<String> sampleIds = new ArrayList<>();
-    private static Log LOG = LogFactory.getLog(ExpressionReader.class);  
-    
+    private static Log LOG = LogFactory.getLog(ExpressionReader.class);
+
     private static final Pattern FILENAME_PATTERN = Pattern.compile("(\\S+)\\.htseq\\.counts.*");
 
     @Override
@@ -77,21 +78,22 @@ public class ExpressionReader implements ItemStreamReader<String> {
                     LOG.error("Failed to extract file");
                     throw new ItemStreamException("Failed to process file");
                 }
-                
+
                 try {
                     String sampleId = fileData.getSampleIds().get(0);
-                    if (gdcAliquotIdToSampleId.containsKey(sampleId.toUpperCase())) {
+                    if (gdcAliquotIdToSampleId.containsKey(sampleId.toUpperCase()) && !samplesSeen.contains(sampleId)) {
                         readFile(expressionFile, executionContext, gdcAliquotIdToSampleId.get(sampleId));
                     }
-                    else if (gdcIdToSampleId.containsKey(sampleId.toUpperCase())) {
+                    else if (gdcIdToSampleId.containsKey(sampleId.toUpperCase()) && !samplesSeen.contains(sampleId)) {
                         readFile(expressionFile, executionContext, gdcIdToSampleId.get(sampleId.toUpperCase()));
                     }
-                    else if (gdcUUIDToSampleId.containsKey(sampleId.toUpperCase())) {
+                    else if (gdcUUIDToSampleId.containsKey(sampleId.toUpperCase()) && !samplesSeen.contains(sampleId)) {
                         readFile(expressionFile, executionContext, gdcUUIDToSampleId.get(sampleId.toUpperCase()));
-                    }                    
+                    }
                     else {
                         LOG.error("Could not find id from filename " + fileData.getFilename());
                     }
+                    samplesSeen.add(sampleId);
                 }
                 catch (Exception e) {
                     LOG.error("Failed to read file " + fileData.getFilename());
@@ -104,7 +106,7 @@ public class ExpressionReader implements ItemStreamReader<String> {
         for (String sampleId : sampleIds) {
             headerList.add(sampleId);
         }
-        executionContext.put("expressionHeader", headerList);        
+        executionContext.put("expressionHeader", headerList);
     }
 
     @Override
@@ -118,9 +120,9 @@ public class ExpressionReader implements ItemStreamReader<String> {
         if (!expressionRecords.isEmpty()) {
             return expressionRecords.remove(0);
         }
-        return null;        
+        return null;
     }
-    
+
     private void readFile(File expressionFile, ExecutionContext e, String sampleId) throws Exception {
         //TODO: There should be a cache for gene id mappings
         BufferedReader br = new BufferedReader(new FileReader(expressionFile));
@@ -136,11 +138,11 @@ public class ExpressionReader implements ItemStreamReader<String> {
             //genes.add(geneId);
             if (!sampleIds.contains(sampleId)) {
                 sampleIds.add(sampleId);
-            }   
+            }
             expressionMap.put(geneId, sampleId, value);
         }
     }
-    
+
     private void generateExpressionRecords() {
         for (String gene : genes) {
             String expressionRecord = gene;
