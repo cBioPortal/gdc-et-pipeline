@@ -31,6 +31,8 @@ public class CnaReader implements ItemStreamReader<CnaRecord> {
     private Map<String, String> gdcAliquotIdToSampleId;
 
     private List<CnaRecord> cnaRecords = new ArrayList<>();
+    private Set<String> samplesSeen = new HashSet<>();
+
     private static Log LOG = LogFactory.getLog(CnaReader.class);
 
     @Override
@@ -80,20 +82,37 @@ public class CnaReader implements ItemStreamReader<CnaRecord> {
         List<String> headerList = new ArrayList<>(Arrays.asList(header.split("\t")));
         headerList.replaceAll(String::toUpperCase);
 
+        // Keep these in order
         int geneIdIndex = headerList.indexOf("GENE ID");
         if (geneIdIndex != -1) {
             headerList.remove(geneIdIndex);
         }
+        int geneSymbolIndex = headerList.indexOf("GENE SYMBOL");
+        if (geneSymbolIndex != -1) {
+            headerList.remove(geneSymbolIndex);
+        }
+        headerList.add(geneSymbolIndex, "Hugo_Symbol");
         int cytobandIndex = headerList.indexOf("CYTOBAND");
         if (cytobandIndex != -1) {
             headerList.remove(cytobandIndex);
         }
 
+        List<Integer> indicesToSkip = new ArrayList<>();
+
         // Replace case ids with sample ids
         for (int i = 0; i < headerList.size(); i++) {
             if (gdcAliquotIdToSampleId.containsKey(headerList.get(i))) {
-                headerList.set(i, gdcAliquotIdToSampleId.get(headerList.get(i)));
+                String sid = gdcAliquotIdToSampleId.get(headerList.get(i));
+                if (samplesSeen.contains(sid)) {
+                    indicesToSkip.add(0,i);
+                }
+                headerList.set(i, sid);
+                samplesSeen.add(sid);
             }
+        }
+
+        for (Integer indexToSkip : indicesToSkip) {
+            headerList.remove(indexToSkip);
         }
 
         executionContext.put("cnaHeader", headerList);
@@ -104,6 +123,9 @@ public class CnaReader implements ItemStreamReader<CnaRecord> {
             }
             if (cytobandIndex != -1) {
                 fields.remove(cytobandIndex);
+            }
+            for (Integer indexToSkip : indicesToSkip) {
+                fields.remove(indexToSkip);
             }
             // Assuming that only ensembl id is present for the gene symbol
             cnaRecords.add(new CnaRecord(fields.get(0), fields.subList(1, fields.size())));

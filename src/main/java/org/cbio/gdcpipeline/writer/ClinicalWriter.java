@@ -102,10 +102,10 @@ public class ClinicalWriter implements ItemStreamWriter<ClinicalDataModel> {
             public void writeHeader(Writer writer) throws IOException {
                 Map<String, List<String>> headers = data.getHeaders();
                 StringBuilder sb = new StringBuilder();
-                sb.append(StringUtils.join(headers.get("displayNames"), '\t')).append("\n");
-                sb.append(StringUtils.join(headers.get("description"), '\t')).append("\n");
-                sb.append(StringUtils.join(headers.get("datatype"), '\t')).append("\n");
-                sb.append(StringUtils.join(headers.get("priority"), '\t')).append("\n");
+                sb.append("#").append(StringUtils.join(headers.get("displayNames"), '\t')).append("\n");
+                sb.append("#").append(StringUtils.join(headers.get("description"), '\t')).append("\n");
+                sb.append("#").append(StringUtils.join(headers.get("datatype"), '\t')).append("\n");
+                sb.append("#").append(StringUtils.join(headers.get("priority"), '\t')).append("\n");
                 List<String> list = headers.get("headers");
                 for (int i = 0; i < list.size(); i++) {
                     list.set(i, list.get(i).toUpperCase());
